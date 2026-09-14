@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 import pytest
 

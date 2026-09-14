@@ -30,7 +30,7 @@ assertion, all of which the previous red run had skipped.
 
 | Gate | Status | Evidence |
 |---|---|---|
-| pytest | PASS | 84 passed, 3 skipped (`python -m pytest -q -W ignore::DeprecationWarning`) |
+| pytest | PASS | 90 passed, 3 skipped (`python -m pytest -q -W ignore::DeprecationWarning`) |
 | ruff check | PASS | `ruff check .` — all checks passed on ruff 0.16.7 |
 | ruff format | PASS | `ruff format --check .` — 30 files already formatted (Python only; see the fleet-verbatim note under Template comparison) |
 | mypy | PASS | `python -m mypy` — 30 source files, no issues |
@@ -190,14 +190,20 @@ implemented but unexecuted.
 
 ## Release monitoring
 
+Nine cases in `tests/test_release_polling.py`. Each routing assertion was
+confirmed to fail against a deliberately broken orchestrator before being kept.
+
 | Case | Status | Evidence |
 |---|---|---|
-| Empty database builds history without polling | PASS | `tests/test_release_polling.py` |
-| Populated database polls for the next expected month | PASS | `tests/test_release_polling.py` |
-| `--start-date` explicit backfill, no polling | PASS | `tests/test_release_polling.py` |
-| `--no-watch` collects without polling | PASS | executed twice on PostgreSQL above |
-| Timeout exits 0 with no writes | PASS | `tests/test_release_polling.py` |
-| ETag unchanged / changed / header missing | PASS | `tests/test_release_polling.py` |
+| Empty database builds history without polling | PASS | `test_an_empty_database_builds_history_without_polling` — the watch loop and `time.sleep` both raise if reached |
+| Populated database without `--no-watch` enters the watch loop | PASS | `test_a_populated_database_without_no_watch_enters_the_watch_loop` |
+| `--start-date` explicit backfill, no polling | PASS | `test_an_explicit_start_date_never_polls` |
+| `--no-watch` rewinds without polling | PASS | `test_no_watch_on_a_populated_database_rewinds_without_polling`, plus two executed PostgreSQL runs above |
+| Timeout exits 0 with no writes | PASS | `test_timeout_without_a_release_is_a_normal_outcome`; the run then returns 0 |
+| ETag unchanged | PASS | `test_unchanged_workbook_downloads_once` — one download, then header requests |
+| ETag changed | PASS | `test_changed_workbook_is_redownloaded` |
+| ETag header missing | PASS | `test_missing_entity_tag_never_optimises_a_release_away` — never optimises a release away |
+| Release detected | PASS | `test_new_release_returns_immediately` |
 
 ## Spark / Databricks SQL grammar
 

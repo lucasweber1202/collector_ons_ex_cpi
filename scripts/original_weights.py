@@ -120,11 +120,8 @@ def upsert_original_weights(
 ) -> tuple[int, int]:
     """Write official weights idempotently and return ``(new, new_vintages)``.
 
-    Each row states its own ``weight_base_year``. The two ONS weight products
-    run different annual regimes -- W1 labels January and February-December of
-    one calendar year, while a consumption-segment basket runs February to the
-    following January -- so the regime year cannot be inferred from the
-    reference month here.
+    Each row states its own ``weight_base_year``. Each official EX-CPI row carries its own regime year, so the
+    regime cannot be inferred from the reference month here.
     """
     today = collected_at.date()
     incoming: list[dict[str, Any]] = []

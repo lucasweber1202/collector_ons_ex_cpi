@@ -102,7 +102,7 @@ def test_an_oversized_declared_length_is_refused(monkeypatch: pytest.MonkeyPatch
         return httpx.Response(200, request=request, content=b"x" * 4096)
 
     with _client(handler) as client:
-        with pytest.raises(ValueError, match="above the download limit"):
+        with pytest.raises(ValueError, match="exceeds download limit"):
             extract.http_get(client, URL)
 
 
@@ -126,6 +126,6 @@ def test_an_oversized_stream_is_refused_before_it_is_fully_buffered(
         return httpx.Response(200, request=request, stream=_Stream())
 
     with _client(streaming_handler) as client:
-        with pytest.raises(ValueError, match="exceeded the 1024 byte limit"):
+        with pytest.raises(ValueError, match="exceeded 1024 bytes"):
             extract.http_get(client, URL)
     assert len(produced) < 10

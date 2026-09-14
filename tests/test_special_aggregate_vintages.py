@@ -206,15 +206,15 @@ def test_mm23_original_weight_layer_preserves_source_cdid_and_alt_mapping() -> N
 
     originals, audit = build_mm23_original_weight_layer(regimes, _alt_catalog())
 
-    assert originals[date(2026, 1, 1)]["CPI_MM23_A9FU"] == 702.0
-    assert audit["CPI_MM23_A9FU"]["native_id"] == "A9FU"
-    assert audit["CPI_MM23_A9FU"]["mapped_series_id"].endswith("_DKC6")
-    assert audit["CPI_MM23_A9FU"]["dataset"].startswith("ONS Consumer price inflation")
-    assert len(originals[date(2026, 1, 1)]) == len(EX_CPI_SPECIAL_AGGREGATES)
-    assert len(audit) == len(EX_CPI_SPECIAL_AGGREGATES)
+    assert originals[date(2026, 1, 1)]["EXCPI_WEIGHT_NATIVE_A9FU"] == 702.0
+    assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["native_id"] == "A9FU"
+    assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["mapped_series_id"].endswith("_DKC6")
+    assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["dataset"].startswith("ONS Consumer price inflation")
+    assert len(originals[date(2026, 1, 1)]) == 2 * len(EX_CPI_SPECIAL_AGGREGATES)
+    assert len(audit) == 2 * len(EX_CPI_SPECIAL_AGGREGATES)
 
 
 def test_mm23_original_weight_id_normalizes_native_cdid() -> None:
-    assert mm23_original_weight_id(" a9fu ") == "CPI_MM23_A9FU"
+    assert mm23_original_weight_id(" a9fu ") == "EXCPI_WEIGHT_NATIVE_A9FU"
     with pytest.raises(ValueError, match="CDID is empty"):
         mm23_original_weight_id("---")

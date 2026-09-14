@@ -5,6 +5,12 @@ is reused from `collector_ons_cpi`; every figure below comes from this
 collector's own runs. Databricks execution remains `SKIP`, so this collector is
 **not** "100% production-certified".
 
+The gates below were executed both locally against PostgreSQL 16 and in GitHub
+Actions. Certification run
+[#26](https://github.com/lucasweber1202/collector_ons_ex_cpi/actions/runs/34875804596)
+is green on all four jobs: `quality`, `live-ons`, `historical-mm23` and
+`postgresql`.
+
 ## Scope
 
 - 10 official Table 38 index series, `EXCPI_INDEX_NATIVE_<CDID>`:
@@ -24,7 +30,7 @@ collector's own runs. Databricks execution remains `SKIP`, so this collector is
 |---|---|---|
 | pytest | PASS | 84 passed, 3 skipped (`python -m pytest -q -W ignore::DeprecationWarning`) |
 | ruff check | PASS | `ruff check .` — all checks passed on ruff 0.16.7 |
-| ruff format | PASS | `ruff format --check .` — 47 files already formatted |
+| ruff format | PASS | `ruff format --check .` — 30 files already formatted (Python only; see the fleet-verbatim note under Template comparison) |
 | mypy | PASS | `python -m mypy` — 30 source files, no issues |
 | compileall | PASS | `python -m compileall -q main.py scripts tests` |
 | Pipeline lookback regression | PASS | `tests/test_main_collect.py` drives `_collect()` through the transaction and asserts the 12-month YoY lookback is validation context only and is never persisted |
@@ -62,10 +68,20 @@ declares the consolidated contract overriding stale examples.
 | HTTP | one managed client, timeout, bounded retry, no arbitrary redirects | single `http_get` with host allowlist | MATCH |
 | Dependencies | minimal, mirrored, no `requests`/`python-dotenv`/ORM | mirrored; `tests/test_dependencies.py` enforces | MATCH |
 | Standalone | no shared core, no cross-repo import | verified below | MATCH |
+| Fleet-verbatim files | `.github/` copied byte-for-byte from the pilot | `.github/skills/` and `.github/prompts/` identical to the governance repository | MATCH — was GUIDELINE DRIFT, fixed in this PR |
+| CI workflow | not added unless explicitly requested | `ex-cpi-certification.yml` | ACCEPTABLE LOCAL EXTENSION — explicitly requested; it is the only way to execute the PostgreSQL and live-ONS gates reproducibly |
 
-No GUIDELINE DRIFT or BLOCKER remains open against the reachable authority. The
-residual risk this gate keeps open is that the pilot's concrete files may differ
-from the guideline prose in ways the prose does not describe.
+One GUIDELINE DRIFT was found and fixed while certifying: an earlier commit on
+this branch ran `ruff format` over the repository, and ruff 0.16 formats Python
+fenced inside Markdown, so it rewrote the fleet-wide VERBATIM
+`.github/skills/test-driven-development/SKILL.md`. The file is restored to the
+governance repository's byte-for-byte copy and `extend-exclude = ["*.md"]` now
+scopes ruff to this repository's Python, so a formatter can never rewrite a
+fleet file again.
+
+No BLOCKER remains open against the reachable authority. The residual risk this
+gate keeps open is that the pilot's concrete files may differ from the guideline
+prose in ways the prose does not describe.
 
 ## Live ONS
 

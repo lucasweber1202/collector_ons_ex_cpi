@@ -54,23 +54,23 @@ Write one minimal test showing what should happen.
 ```python
 def test_retries_failed_operations_3_times():
     attempts = []
-
+    
     def operation():
         attempts.append(1)
         if len(attempts) < 3:
-            raise Exception("fail")
-        return "success"
-
+            raise Exception('fail')
+        return 'success'
+    
     result = retry_operation(operation)
-
-    assert result == "success"
+    
+    assert result == 'success'
     assert len(attempts) == 3
 ```
 
 **Bad:**
 ```python
 def test_retry_works():
-    mock = Mock(side_effect=[Exception(), Exception(), "success"])
+    mock = Mock(side_effect=[Exception(), Exception(), 'success'])
     retry_operation(mock)
     assert mock.call_count == 3  # Tests mock, not code
 ```
@@ -268,17 +268,17 @@ For any code that estimates parameters, fits models, or transforms numerical dat
 def test_ar1_estimation_recovers_known_parameters():
     """Generate AR(1) data with known phi, estimate, verify recovery."""
     np.random.seed(42)
-
+    
     # Known DGP: AR(1) with phi=0.8, sigma=1.0
     true_phi = 0.8
     T = 1000
     y = np.zeros(T)
     for t in range(1, T):
-        y[t] = true_phi * y[t - 1] + np.random.normal(0, 1.0)
-
+        y[t] = true_phi * y[t-1] + np.random.normal(0, 1.0)
+    
     # Run estimation pipeline
     result = estimate_ar1(y)
-
+    
     # Verify recovery (not exact — tolerance-based)
     assert result.phi == pytest.approx(true_phi, abs=0.05)
 ```

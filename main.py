@@ -176,10 +176,10 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     collected_at = datetime.now(UTC)
     with engine.begin() as conn:
         assert_current_series_ids(conn)
-        new_obs, new_vintages = upsert_time_series(conn, observations, collected_at)
+        new_obs, new_vintages = upsert_time_series(conn, stored_observations, collected_at)
         new_weights, weight_vintages = upsert_original_weights(conn, rows, collected_at)
         metadata_inserted, metadata_updated = upsert_metadata(
-            conn, observations, collected_at, get_series_catalog()
+            conn, stored_observations, collected_at, get_series_catalog()
         )
     logger.info(
         "Run result: observations=%d vintages=%d official_weights=%d "

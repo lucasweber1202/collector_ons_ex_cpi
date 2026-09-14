@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import TypeVar
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
-from typing import TypeVar
 
 T = TypeVar("T")
 

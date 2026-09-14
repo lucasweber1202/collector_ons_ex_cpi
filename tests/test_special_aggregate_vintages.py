@@ -197,7 +197,7 @@ def test_weight_regime_mapping_rejects_missing_index_target() -> None:
         map_exclusion_weight_regimes_to_table38(regimes, catalog)
 
 
-def test_mm23_original_weight_layer_preserves_source_cdid_and_alt_mapping() -> None:
+def test_mm23_original_weight_layer_preserves_source_cdid_and_index_mapping() -> None:
     regimes = {
         date(2026, 1, 1): {
             aggregate["weight_cdid"]: 700.0 + index

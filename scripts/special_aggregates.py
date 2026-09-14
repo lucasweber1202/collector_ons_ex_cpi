@@ -1,10 +1,6 @@
 """Reviewed ONS MM23 crosswalk and source checks for CPI exclusion aggregates.
 
-This module deliberately does not persist MM23 weights yet. The source publishes
-those weights as annual observations while this collector's existing
-``original_weights`` contract is reference-month based. Until that storage
-semantics is explicitly resolved, MM23 is used as a source-verified identity and
-validation layer over Table 38 EX-CPI series.
+MM23 weights are persisted by the standalone pipeline with explicit monthly regime and vintage semantics; published rates remain validation-only.
 """
 
 from __future__ import annotations
@@ -228,7 +224,7 @@ def resolve_table38_alt_series(
         native_id = row["index_cdid"]
         candidates = by_native.get(native_id, [])
         if len(candidates) > 1:
-            raise ValueError(f"Table 38 publishes duplicate ALT CDID {native_id}: {candidates}")
+            raise ValueError(f"Table 38 publishes duplicate EX-CPI CDID {native_id}: {candidates}")
         if not candidates:
             missing.append(native_id)
             continue

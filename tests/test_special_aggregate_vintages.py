@@ -204,8 +204,12 @@ def test_weight_regime_mapping_rejects_missing_index_target() -> None:
 def test_mm23_original_weight_layer_preserves_source_cdid_and_index_mapping() -> None:
     regimes = {
         date(2026, 1, 1): {
-            aggregate["weight_cdid"]: 700.0 + index
+            cdid: value
             for index, aggregate in enumerate(EX_CPI_SPECIAL_AGGREGATES)
+            for cdid, value in (
+                (aggregate["weight_cdid"], 700.0 + index),
+                (aggregate["complement_weight_cdid"], 300.0 - index),
+            )
         }
     }
 

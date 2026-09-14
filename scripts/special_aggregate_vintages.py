@@ -229,8 +229,8 @@ def map_exclusion_weight_regimes_to_table38(
     """Map MM23 weight CDIDs onto their existing Table 38 EX-CPI index targets.
 
     This target-ID view is useful for validation and joins. It is not the
-    preferred persistence identity for `original_weights`, which follows the W1
-    precedent and preserves the source weight identifier via `CPI_MM23_<CDID>`.
+    preferred persistence identity for `original_weights`, which preserves the source weight identifier via
+    EXCPI_WEIGHT_NATIVE_<CDID>.
     """
     resolved, missing = resolve_table38_alt_series(catalog)
     if missing:
@@ -267,11 +267,10 @@ def build_mm23_original_weight_layer(
     regimes: Mapping[date, Mapping[str, float]],
     catalog: Mapping[str, Mapping[str, str]],
 ) -> tuple[dict[date, dict[str, float]], dict[str, dict[str, str]]]:
-    """Build source-ID weights plus the audit crosswalk to Table 38 ALT series.
+    """Build source-ID weights plus the audit crosswalk to Table 38 EX-CPI index series.
 
-    This mirrors W1 storage: the official source row keeps its own stable
-    identifier in `original_weights`, while `Original Weight Map` records the
-    exact Table 38 target. The native MM23 weight CDID therefore remains
+    The official source row keeps its own stable identifier in
+    original_weights, while the audit map records the exact Table 38 target. The native MM23 weight CDID therefore remains
     auditable instead of being replaced by the related index CDID.
     """
     resolved, missing = resolve_table38_alt_series(catalog)

@@ -16,13 +16,13 @@ LATER = datetime(2026, 8, 20)  # noqa: DTZ001
 def _rows(january: float, february: float) -> list[dict[str, object]]:
     return [
         {
-            "series_id": "CPI_W1_0",
+            "series_id": "EXCPI_WEIGHT_NATIVE_A9FU",
             "reference_date": date(2026, 1, 1),
             "weight": january,
             "weight_base_year": 2026,
         },
         {
-            "series_id": "CPI_W1_0",
+            "series_id": "EXCPI_WEIGHT_NATIVE_A9FU",
             "reference_date": date(2026, 2, 1),
             "weight": february,
             "weight_base_year": 2026,

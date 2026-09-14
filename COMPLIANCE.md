@@ -5,9 +5,10 @@ is reused from `collector_ons_cpi`; every figure below comes from this
 collector's own runs. Databricks execution remains `SKIP`, so this collector is
 **not** "100% production-certified".
 
-The gates below were executed both locally against PostgreSQL 16 and in GitHub
-Actions. The certification run on this branch's head,
-[34876046564](https://github.com/lucasweber1202/collector_ons_ex_cpi/actions/runs/34876046564),
+The code gates below were executed both locally against PostgreSQL 16 and in GitHub
+Actions. The final certification run for code commit
+`caef87af64c67b1c3655b2b2cb966012f0f96221`,
+[34876624364](https://github.com/lucasweber1202/collector_ons_ex_cpi/actions/runs/34876624364),
 is green on all four jobs — `quality`, `live-ons`, `historical-mm23` and
 `postgresql` — with every step executed, including the second run, the
 second-run no-op assertion, the recorded counts and the metadata-scope
@@ -39,51 +40,30 @@ assertion, all of which the previous red run had skipped.
 
 ## Template comparison
 
-**SKIP — `guimasuko/collector_template` is not reachable from this session.**
-Re-tried 2026-09-14; every path failed: `add_repo` refuses the attachment
-(`cross-tier adds are not supported in v1`), the GitHub API tool answers
-`Access denied`, an anonymous `git clone` is refused with
-`could not read Username`, `api.github.com` returns 403 through the proxy, and
-`raw.githubusercontent.com/.../GUIDELINES.md` returns 404. The root
-`GUIDELINES.md` and `FORECAST_TARGET_GUIDELINES.md` are not present in the
-governance repository either, so those authorities are equally unavailable.
+**PASS — executed directly on 2026-09-14.** Compared this repository with
+[`guimasuko/collector_template`](https://github.com/guimasuko/collector_template)
+at tree `8e4613b36c2808a7de234934a81bb26f7a22d367`: root
+`GUIDELINES.md` (blob `1bf3df07a9b81932d26571def6bf0e531b8c1464`),
+`FORECAST_TARGET_GUIDELINES.md` (blob
+`7ac0663c7825443e1009a18481c0b73b0184b1cd`), repository layout, fleet
+skills and configuration structure.
 
-The comparison was therefore executed against the reachable authority,
-`lucasweber1202/Coletores/MASTER_MACRO_COLLECTOR_GUIDELINES.md`, which the fleet
-declares the consolidated contract overriding stale examples.
+| Area | Classification | Evidence |
+|---|---|---|
+| Repository/schema identity and flat layout | MATCH | `collector_ons_ex_cpi` equals `SCHEMA_NAME`; root `main.py`; flat `scripts/`; no shared core |
+| Fleet-standard `metadata`, `time_series`, `logs` | MATCH | Standard columns and keys preserved |
+| Structured IDs and metadata vocabulary | MATCH | Round-trippable `EXCPI_*_NATIVE_<CDID>`; `metadata.country = GBP` |
+| Vintage and unchanged-rerun semantics | MATCH | Same-day update, later-day insert, historical baseline stamped on collection, zero-write unchanged rerun |
+| Forecast-target validation | MATCH | Horizon/context rates are validation-only; stored index levels remain official Table 38 observations |
+| `original_weights` extension | NECESSARY SOURCE-SPECIFIC EXTENSION | Untouched MM23 weights require January and February–December regimes plus weight vintages |
+| Separate MM23 modules | NECESSARY SOURCE-SPECIFIC EXTENSION | Exact panel parsing, published-rate validation and archived snapshot selection are distinct source contracts |
+| No operational `weights` table | NECESSARY SOURCE-SPECIFIC EXTENSION | No transformed operational share is produced; inventing one would violate source fidelity |
+| Certification workflow | NECESSARY SOURCE-SPECIFIC EXTENSION | Explicitly requested reproducible live ONS, historical-MM23 and PostgreSQL gates |
+| Minor drift | MATCH | None found |
+| Blocker | MATCH | None found |
 
-| Area | Guideline | EX-CPI today | Classification |
-|---|---|---|---|
-| Repository/schema name | `collector_<source>_<dataset>` == `SCHEMA_NAME` | `collector_ons_ex_cpi` both | MATCH |
-| Layout | `main.py` at root, flat `scripts/`, no `core`/`lib`/`utils` | matches | MATCH |
-| Extra modules | split only when the source forces it | `special_aggregates.py`, `special_aggregate_rates.py`, `special_aggregate_vintages.py` | ACCEPTABLE LOCAL EXTENSION — three distinct MM23 contracts (panel parse, rate validation, archived vintages) |
-| `metadata` DDL | 13 columns, PK `series_id` | identical | MATCH |
-| `time_series` DDL | 5 columns, PK `(series_id, reference_date, vintage_date)` | identical | MATCH |
-| `logs` DDL | identity `id`, bounded text | identical | MATCH |
-| `original_weights` | official weights stored untransformed when derived weights exist | present, plus `weight_base_year`; keyed `(series_id, reference_date, vintage_date)` | REQUIRED SOURCE-SPECIFIC EXCEPTION — two MM23 regimes per year cannot share a series-only key |
-| Operational `weights` | only when weights are transformed | absent; this collector derives none | MATCH |
-| 64-bit float | dialect common subset | `DOUBLE PRECISION` / `DOUBLE` per dialect | REQUIRED SOURCE-SPECIFIC EXCEPTION |
-| Series IDs | structured, uppercase, round-trippable, no opaque native id alone | `EXCPI_INDEX_NATIVE_<CDID>` / `EXCPI_WEIGHT_NATIVE_<CDID>` | MATCH |
-| `metadata.country` | ISO 4217 currency code | `GBP` | MATCH — was `GBR`, fixed in this PR |
-| Vintage semantics | first sight, same-day update, later revision as a new row | implemented for both `time_series` and `original_weights` | MATCH |
-| Release monitoring | empty DB builds now, populated DB polls, timeout is success | implemented; `tests/test_release_polling.py` | MATCH |
-| HTTP | one managed client, timeout, bounded retry, no arbitrary redirects | single `http_get` with host allowlist | MATCH |
-| Dependencies | minimal, mirrored, no `requests`/`python-dotenv`/ORM | mirrored; `tests/test_dependencies.py` enforces | MATCH |
-| Standalone | no shared core, no cross-repo import | verified below | MATCH |
-| Fleet-verbatim files | `.github/` copied byte-for-byte from the pilot | `.github/skills/` and `.github/prompts/` identical to the governance repository | MATCH — was GUIDELINE DRIFT, fixed in this PR |
-| CI workflow | not added unless explicitly requested | `ex-cpi-certification.yml` | ACCEPTABLE LOCAL EXTENSION — explicitly requested; it is the only way to execute the PostgreSQL and live-ONS gates reproducibly |
-
-One GUIDELINE DRIFT was found and fixed while certifying: an earlier commit on
-this branch ran `ruff format` over the repository, and ruff 0.16 formats Python
-fenced inside Markdown, so it rewrote the fleet-wide VERBATIM
-`.github/skills/test-driven-development/SKILL.md`. The file is restored to the
-governance repository's byte-for-byte copy and `extend-exclude = ["*.md"]` now
-scopes ruff to this repository's Python, so a formatter can never rewrite a
-fleet file again.
-
-No BLOCKER remains open against the reachable authority. The residual risk this
-gate keeps open is that the pilot's concrete files may differ from the guideline
-prose in ways the prose does not describe.
+The comparison closes the former accessibility SKIP. It does not close the
+separate Databricks execution gate.
 
 ## Live ONS
 
@@ -231,6 +211,10 @@ never recorded as PASS.
 
 ## Remaining blockers
 
-1. **Databricks execution** — SKIP, no approved workspace or credentials.
-2. **Template comparison against `guimasuko/collector_template`** — SKIP, the
-   repository is unreachable from this session by every path tried.
+1. **Databricks execution — SKIP.** No approved Databricks workspace, host or
+   credentials are available. Spark SQL grammar passes, but no real Unity
+   Catalog DDL/MERGE, two-run or revision execution was performed.
+
+The template comparison is PASS and no code/data blocker is known. This
+collector remains `verification`, not `ready`, solely because the mandatory
+Databricks runtime gate is unexecuted.

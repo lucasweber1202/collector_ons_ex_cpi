@@ -26,6 +26,26 @@ jobs:
 
   live-ons:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ONS_LIVE_TEST: '1'
+      COLLECTOR_DOWNLOAD_DELAY: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - run: set -o pipefail; python -m pytest tests/test_live_source.py -q -s | tee live-ons.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-ons-evidence
+          path: live-ons.log
+
+  historical-mm23:
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       ONS_LIVE_TEST: '1'
@@ -37,12 +57,12 @@ jobs:
           python-version: '3.11'
           cache: pip
       - run: python -m pip install -e '.[dev]'
-      - run: set -o pipefail; python -m pytest tests/test_live_source.py tests/test_live_history.py -q -s | tee live-ons.log
+      - run: set -o pipefail; python -m pytest tests/test_live_history.py -q -s | tee historical-mm23.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: live-ons-evidence
-          path: live-ons.log
+          name: historical-mm23-evidence
+          path: historical-mm23.log
 
   postgresql:
     runs-on: ubuntu-latest
@@ -81,6 +101,7 @@ jobs:
           grep -F 'Run result: observations=0 vintages=0 official_weights=0 weight_vintages=0 metadata_inserted=0 metadata_updated=0'
           postgresql-run-2.log
       - name: Record database counts
+        if: always()
         run: >-
           psql postgresql://collector:collector@localhost:5432/collector -v ON_ERROR_STOP=1 -c
           "SELECT

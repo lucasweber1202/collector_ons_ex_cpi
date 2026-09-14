@@ -226,7 +226,7 @@ def map_exclusion_weight_regimes_to_table38(
     regimes: Mapping[date, Mapping[str, float]],
     catalog: Mapping[str, Mapping[str, str]],
 ) -> dict[date, dict[str, float]]:
-    """Map MM23 weight CDIDs onto their existing Table 38 ALT targets.
+    """Map MM23 weight CDIDs onto their existing Table 38 EX-CPI index targets.
 
     This target-ID view is useful for validation and joins. It is not the
     preferred persistence identity for `original_weights`, which follows the W1
@@ -235,7 +235,7 @@ def map_exclusion_weight_regimes_to_table38(
     resolved, missing = resolve_table38_alt_series(catalog)
     if missing:
         raise ValueError(
-            f"Cannot map MM23 exclusion weights; Table 38 ALT CDIDs missing: {missing}"
+            f"Cannot map MM23 exclusion weights; Table 38 EX-CPI index CDIDs missing: {missing}"
         )
     target_by_weight = {
         aggregate["weight_cdid"]: resolved[aggregate["index_cdid"]]
@@ -277,7 +277,7 @@ def build_mm23_original_weight_layer(
     resolved, missing = resolve_table38_alt_series(catalog)
     if missing:
         raise ValueError(
-            f"Cannot build MM23 original weights; Table 38 ALT CDIDs missing: {missing}"
+            f"Cannot build MM23 original weights; Table 38 EX-CPI index CDIDs missing: {missing}"
         )
     audit: dict[str, dict[str, str]] = {}
     source_id_by_weight: dict[str, str] = {}

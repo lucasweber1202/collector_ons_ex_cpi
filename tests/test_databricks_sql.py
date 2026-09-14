@@ -38,7 +38,7 @@ def test_all_emitted_sql_parses_as_spark_sql() -> None:
             .config("spark.ui.enabled", "false")
             .getOrCreate()
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - environment capability probe
         pytest.skip(f"Spark SQL parser unavailable: {exc}")
 
     parser = spark._jsparkSession.sessionState().sqlParser()

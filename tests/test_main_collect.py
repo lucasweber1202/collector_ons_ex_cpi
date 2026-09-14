@@ -7,6 +7,15 @@ from datetime import date
 import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from typing import TypeVar
+
+T = TypeVar("T")
+
+
+def _record(calls: list[str], label: str, value: T) -> T:
+    calls.append(label)
+    return value
+
 
 import main
 
@@ -31,34 +40,31 @@ def _patch_pipeline(
     observations: dict[date, dict[str, float]],
 ) -> list[str]:
     calls: list[str] = []
-    monkeypatch.setattr(main, "init_db", lambda _engine: (calls.append("init_db"), None)[1])
+    monkeypatch.setattr(main, "init_db", lambda _engine: _record(calls, "init_db", None))
     monkeypatch.setattr(main, "get_max_reference_date", lambda _engine: None)
     monkeypatch.setattr(main, "DEFAULT_START_DATE", requested)
     monkeypatch.setattr(
         main,
         "collect_raw_data",
-        lambda start: (calls.append(f"table38:{start.isoformat()}"), observations)[1],
+        lambda start: _record(calls, f"table38:{start.isoformat()}", observations),
     )
     monkeypatch.setattr(main, "collect_mm23_special_aggregates", lambda: object())
     monkeypatch.setattr(
         main,
         "complement_weight_checks",
-        lambda _panel: (calls.append("mm23"), [{"passed": True, "residual": 0.0}])[1],
+        lambda _panel: _record(calls, "mm23", [{"passed": True, "residual": 0.0}]),
     )
     monkeypatch.setattr(
         main,
         "published_12m_rate_checks",
-        lambda _table38, _catalog, _panel: (
-            calls.append("rates"),
-            [{"passed": True, "residual_pp": 0.0}],
-        )[1],
+        lambda _table38, _catalog, _panel: _record(calls, "rates", [{"passed": True, "residual_pp": 0.0}]),
     )
     monkeypatch.setattr(main, "get_series_catalog", _catalog)
     monkeypatch.setattr(main, "get_last_publish_date", lambda: date(2026, 2, 18))
     monkeypatch.setattr(
         main,
         "discover_mm23_snapshots",
-        lambda: (calls.append("snapshots"), [])[1],
+        lambda: _record(calls, "snapshots", []),
     )
     monkeypatch.setattr(main, "january_regime_snapshots", lambda _snapshots: {})
     monkeypatch.setattr(main, "collect_january_weight_panels", lambda *args, **kwargs: {})

@@ -5,8 +5,9 @@ is reused from `collector_ons_cpi`; every figure below comes from this
 collector's own runs. Databricks execution remains `SKIP`, so this collector is
 **not** "100% production-certified".
 
-The gates below were executed both locally against PostgreSQL 16 and in GitHub
-Actions. The certification run on this branch's head,
+The code gates below were executed both locally against PostgreSQL 16 and in GitHub
+Actions. The final certification run for code commit
+`caef87af64c67b1c3655b2b2cb966012f0f96221`,
 [34876624364](https://github.com/lucasweber1202/collector_ons_ex_cpi/actions/runs/34876624364),
 is green on all four jobs — `quality`, `live-ons`, `historical-mm23` and
 `postgresql` — with every step executed, including the second run, the

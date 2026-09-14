@@ -22,7 +22,7 @@ def _rate_fixture() -> tuple[
     current: dict[str, float | None] = {}
     rates: dict[str, float] = {}
     for index, aggregate in enumerate(EX_CPI_SPECIAL_AGGREGATES, start=1):
-        series_id = f"EXCPI_INDEX_A{index:02d}_{aggregate['index_cdid']}"
+        series_id = f"EXCPI_INDEX_NATIVE_{aggregate['index_cdid']}"
         catalog[series_id] = {
             "family": "INDEX",
             "native_id": aggregate["index_cdid"],
@@ -68,14 +68,14 @@ def test_published_12m_rate_check_surfaces_a_wrong_mm23_rate() -> None:
     assert core["residual_pp"] == pytest.approx(0.2)
 
 
-def test_published_12m_rate_check_rejects_missing_table38_alt_target() -> None:
+def test_published_12m_rate_check_rejects_missing_table38_index_target() -> None:
     observations, catalog, panel = _rate_fixture()
     missing_series = next(
         series_id for series_id, fields in catalog.items() if fields["native_id"] == "DKC6"
     )
     del catalog[missing_series]
 
-    with pytest.raises(ValueError, match="Table 38 ALT CDIDs missing.*DKC6"):
+    with pytest.raises(ValueError, match="Table 38 EX-CPI index CDIDs missing.*DKC6"):
         published_12m_rate_checks(observations, catalog, panel)
 
 

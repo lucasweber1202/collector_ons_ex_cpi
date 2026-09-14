@@ -6,10 +6,12 @@ collector's own runs. Databricks execution remains `SKIP`, so this collector is
 **not** "100% production-certified".
 
 The gates below were executed both locally against PostgreSQL 16 and in GitHub
-Actions. Certification run
-[#26](https://github.com/lucasweber1202/collector_ons_ex_cpi/actions/runs/34875804596)
-is green on all four jobs: `quality`, `live-ons`, `historical-mm23` and
-`postgresql`.
+Actions. The certification run on this branch's head,
+[34876046564](https://github.com/lucasweber1202/collector_ons_ex_cpi/actions/runs/34876046564),
+is green on all four jobs — `quality`, `live-ons`, `historical-mm23` and
+`postgresql` — with every step executed, including the second run, the
+second-run no-op assertion, the recorded counts and the metadata-scope
+assertion, all of which the previous red run had skipped.
 
 ## Scope
 

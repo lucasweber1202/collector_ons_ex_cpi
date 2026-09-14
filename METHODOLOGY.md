@@ -14,7 +14,7 @@ For every available annual pair, exclusion weight plus complement weight must eq
 
 ## Weight regimes
 
-Official weights are stored unchanged in parts per 1,000. From 2017, January is sourced from the final MM23 version superseded by the scheduled March release; February–December uses the later annual value. A missing historical snapshot is a source gap and stops the requested backfill. Pre-2017 values are expanded only under the single-regime semantics exposed by MM23.
+Official weights are stored unchanged in parts per 1,000. From 2017, January is sourced from the final MM23 version superseded by the scheduled March release; February–December uses the later annual value. When ONS publishes MM23 more than once in March, as it did on 14 and 21 March 2017, the January regime is the **last** scheduled March snapshot: the version the weight-changing release superseded. A missing historical snapshot is a source gap and stops the requested backfill. Pre-2017 values are expanded only under the single-regime semantics exposed by MM23. The special-aggregate weight series themselves begin in 1996, so earlier months carry index levels and no weight regime; that boundary is derived from the published panel rather than hardcoded.
 
 ## Vintages and storage
 
@@ -24,4 +24,4 @@ The primary key includes `vintage_date`. Same-day corrections update the same vi
 
 ## Source gaps
 
-The ONS previous-version page is the only accepted evidence for historical January regimes. Years without a unique scheduled-March snapshot are not marked complete. Live availability and the recovered-year matrix must be regenerated during a connected verification run.
+The ONS previous-version page is the only accepted evidence for historical January regimes. A year with no scheduled-March snapshot at all is a source gap and is not marked complete; a year with several is resolved by taking the last, which is the version the weight-changing release superseded. Live availability and the recovered-year matrix must be regenerated during a connected verification run.

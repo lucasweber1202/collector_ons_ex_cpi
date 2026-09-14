@@ -1,34 +1,74 @@
 # EX-CPI compliance record
 
-This file deliberately contains no evidence copied from `collector_ons_cpi`. Counts for COICOP, W1, consumption segments, 697 series, 870 series or 90,064 observations are not evidence for this collector.
+## Scope
 
-## Static scope review
+- 10 official Table 38 index series: EXCPI_INDEX_NATIVE_<CDID>.
+- 20 official MM23 weight series when available: exclusion plus complement EXCPI_WEIGHT_NATIVE_<CDID>.
+- 60 reviewed MM23 CDIDs across the index, rate and weight crosswalks.
+- Table 38 levels are stored; published MM23 12-month rates are validation-only.
 
-- Target set: 10 official index CDIDs.
-- Crosswalk: 60 reviewed MM23 CDIDs across six roles.
-- Stored observations: Table 38 index levels only.
-- Validation-only data: MM23 12-month rates and complement indices.
-- Official weights: MM23 exclusion weights in parts per 1,000.
-- Runtime dependency on `collector_ons_cpi`: none.
-- Fuzzy matching: none.
+## Static gates
 
-## Evidence policy
-
-A gate is PASS only when executed against this branch and this EX-CPI pipeline. The following must not be inferred from unit tests:
-
-| Gate | Status until executed | Required evidence |
+| Gate | Status | Evidence |
 |---|---|---|
-| pytest, ruff, format, mypy, compileall | NOT RUN | command output |
-| live ONS | NOT RUN | ten CDIDs plus validation summary |
-| PostgreSQL fresh DB | NOT RUN | first-run counts and second-run no-op |
-| rollback | NOT RUN | failed transaction leaves no partial product rows |
-| Databricks SQL | NOT RUN | portable SQL/Spark execution |
-| historical snapshots | NOT RUN | year-by-year January and Feb-Dec matrix |
+| Pipeline blocker regression | SKIP — not executed in this GitHub API-only session | tests/test_main_collect.py added; it exercises _collect() through transaction and asserts the lookback month is not persisted. |
+| pytest | SKIP — no Python command runtime exposed | Required command: python -m pytest -q -W ignore::DeprecationWarning. |
+| ruff check | SKIP — no Python command runtime exposed | Required command: ruff check . |
+| ruff format | SKIP — no Python command runtime exposed | Required command: ruff format --check . |
+| mypy | SKIP — no Python command runtime exposed | Required command: python -m mypy. |
+| compileall | SKIP — no Python command runtime exposed | Required command: python -m compileall -q main.py scripts tests. |
 
-## Historical snapshot report
+## Live-source evidence
 
-| Year | January snapshot | Feb-Dec regime | Status |
+| Gate | Status | Evidence |
+|---|---|---|
+| ONS Table 38 and MM23 reconciliation | SKIP — live test not executed | Required command: ONS_LIVE_TEST=1 python -m pytest tests/test_live_source.py -q -s. Record 10 CDIDs, 60 reviewed CDIDs, and residual metrics after execution. |
+
+## Historical snapshot matrix
+
+| Year | January snapshot/version | Feb-Dec regime | Status |
 |---|---|---|---|
-| 2017 onward | Must resolve to one scheduled-March previous version | Current/historical MM23 annual row | Pending connected audit |
+| 2017–current | Not executed | Not executed | SKIP — connected ONS audit not executed |
 
-No row may be changed to PASS without source evidence. A missing or ambiguous snapshot is a SOURCE GAP, never an inferred regime.
+The implementation fails rather than infers January from the February–December regime when a scheduled-March snapshot is missing or ambiguous.
+
+## PostgreSQL evidence
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Fresh database run | SKIP — no PostgreSQL endpoint available to this session | Run python -m scripts.init_db then python main.py --no-watch. |
+| Immediate unchanged rerun | SKIP — fresh run not executed | Verify zero data/metadata writes and one success log. |
+
+## Idempotency
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Time-series and original-weight same-day/later-vintage behavior | SKIP — test suite not executed | Existing persistence tests cover unchanged, same-day repair, and later revision semantics. |
+
+## Revision/vintage tests
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Time series | SKIP — test suite not executed | Persistence modules require execution. |
+| Original weights | SKIP — test suite not executed | tests/test_original_persistence.py uses EXCPI_WEIGHT_NATIVE_A9FU. |
+
+## Rollback
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Transaction rollback after time-series/original-weights writes | SKIP — not yet implemented/executed | Add a PostgreSQL-backed failure-injection regression before promotion. |
+
+## Databricks
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Static SQL portability | SKIP — Spark SQL parser unavailable | Review and parser execution required. |
+| Real Databricks DDL/load/revision/two-run | SKIP — no approved workspace/credentials | Do not treat as PASS without a connected approved workspace. |
+
+## Source gaps
+
+- Historical snapshot discovery and live reconciliation have not been executed in this session; no source conclusion is asserted.
+
+## Remaining blockers
+
+- Certification remains open until the required quality gates, live ONS audit, historical matrix, PostgreSQL first/second run, rollback regression, and Databricks static gate are executed.

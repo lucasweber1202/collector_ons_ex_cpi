@@ -31,11 +31,13 @@ def test_postgresql_rolls_back_observations_and_weights() -> None:
             "weight_base_year": 2026,
         }
     ]
-    with pytest.raises(RuntimeError, match="forced failure after original_weights"):
-        with engine.begin() as conn:
-            upsert_time_series(conn, observations, collected_at)
-            upsert_original_weights(conn, weights, collected_at)
-            raise RuntimeError("forced failure after original_weights")
+    with (
+        pytest.raises(RuntimeError, match="forced failure after original_weights"),
+        engine.begin() as conn,
+    ):
+        upsert_time_series(conn, observations, collected_at)
+        upsert_original_weights(conn, weights, collected_at)
+        raise RuntimeError("forced failure after original_weights")
     with engine.connect() as conn:
         for table in ('time_series', 'original_weights', 'metadata'):
             assert conn.execute(

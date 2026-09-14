@@ -1,13 +1,12 @@
-"""End-to-end orchestration regression for the standalone EX-CPI pipeline."""
+"""End-to-end orchestration regressions for the standalone EX-CPI pipeline."""
 
 from __future__ import annotations
 
 from datetime import date
 
+import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
-
-import pytest
 
 import main
 
@@ -26,18 +25,12 @@ def _catalog() -> dict[str, dict[str, str]]:
     }
 
 
-def test_collect_persists_only_requested_window_and_completes_transaction(
-    engine: Engine, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Lookback drives validation only; the requested month is the stored product."""
-    lookback = date(2025, 1, 1)
-    requested = date(2026, 1, 1)
-    observations = {
-        lookback: {"EXCPI_INDEX_NATIVE_DKC6": 100.0},
-        requested: {"EXCPI_INDEX_NATIVE_DKC6": 102.5},
-    }
+def _patch_pipeline(
+    monkeypatch: pytest.MonkeyPatch,
+    requested: date,
+    observations: dict[date, dict[str, float]],
+) -> list[str]:
     calls: list[str] = []
-
     monkeypatch.setattr(main, "init_db", lambda _engine: calls.append("init_db"))
     monkeypatch.setattr(main, "get_max_reference_date", lambda _engine: None)
     monkeypatch.setattr(main, "DEFAULT_START_DATE", requested)
@@ -55,17 +48,22 @@ def test_collect_persists_only_requested_window_and_completes_transaction(
     monkeypatch.setattr(
         main,
         "published_12m_rate_checks",
-        lambda panel, catalog, mm23: calls.append("rates")
+        lambda _table38, _catalog, _panel: calls.append("rates")
         or [{"passed": True, "residual_pp": 0.0}],
     )
     monkeypatch.setattr(main, "get_series_catalog", _catalog)
     monkeypatch.setattr(main, "get_last_publish_date", lambda: date(2026, 2, 18))
-    monkeypatch.setattr(main, "discover_mm23_snapshots", lambda: calls.append("snapshots") or [])
+    monkeypatch.setattr(
+        main,
+        "discover_mm23_snapshots",
+        lambda: calls.append("snapshots") or [],
+    )
     monkeypatch.setattr(main, "january_regime_snapshots", lambda _snapshots: {})
     monkeypatch.setattr(main, "collect_january_weight_panels", lambda *args, **kwargs: {})
     monkeypatch.setattr(
         main,
-        "build_exclusion_weight_regimes", lambda *args, **kwargs: {requested: {}}
+        "build_exclusion_weight_regimes",
+        lambda *args, **kwargs: {requested: {}},
     )
     monkeypatch.setattr(
         main,
@@ -79,6 +77,20 @@ def test_collect_persists_only_requested_window_and_completes_transaction(
             }
         ],
     )
+    return calls
+
+
+def test_collect_persists_only_requested_window_and_completes_transaction(
+    engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Lookback drives validation only; the requested month is the stored product."""
+    lookback = date(2025, 1, 1)
+    requested = date(2026, 1, 1)
+    observations = {
+        lookback: {"EXCPI_INDEX_NATIVE_DKC6": 100.0},
+        requested: {"EXCPI_INDEX_NATIVE_DKC6": 102.5},
+    }
+    calls = _patch_pipeline(monkeypatch, requested, observations)
 
     assert main._collect(main._parse_args(["--no-watch"]), engine) == 0
     assert calls[:5] == [
@@ -89,9 +101,41 @@ def test_collect_persists_only_requested_window_and_completes_transaction(
         "snapshots",
     ]
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT COUNT(*) FROM collector_ons_ex_cpi.time_series")).scalar() == 1
-        assert conn.execute(text("SELECT COUNT(*) FROM collector_ons_ex_cpi.metadata")).scalar() == 1
-        assert conn.execute(text("SELECT COUNT(*) FROM collector_ons_ex_cpi.original_weights")).scalar() == 1
+        assert conn.execute(
+            text("SELECT COUNT(*) FROM collector_ons_ex_cpi.time_series")
+        ).scalar() == 1
+        assert conn.execute(
+            text("SELECT COUNT(*) FROM collector_ons_ex_cpi.metadata")
+        ).scalar() == 1
+        assert conn.execute(
+            text("SELECT COUNT(*) FROM collector_ons_ex_cpi.original_weights")
+        ).scalar() == 1
         assert conn.execute(
             text("SELECT reference_date, value FROM collector_ons_ex_cpi.time_series")
         ).one() == (requested, 102.5)
+
+
+def test_collect_rolls_back_data_when_metadata_write_fails(
+    engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No partial index or weight rows may survive a metadata failure."""
+    requested = date(2026, 1, 1)
+    observations = {requested: {"EXCPI_INDEX_NATIVE_DKC6": 102.5}}
+    _patch_pipeline(monkeypatch, requested, observations)
+
+    def fail_metadata(*args: object, **kwargs: object) -> tuple[int, int]:
+        raise RuntimeError("metadata failure")
+
+    monkeypatch.setattr(main, "upsert_metadata", fail_metadata)
+    with pytest.raises(RuntimeError, match="metadata failure"):
+        main._collect(main._parse_args(["--no-watch"]), engine)
+    with engine.connect() as conn:
+        for table in (
+            "time_series",
+            "original_weights",
+            "metadata",
+        ):
+            count = conn.execute(
+                text(f"SELECT COUNT(*) FROM collector_ons_ex_cpi.{table}")
+            ).scalar()
+            assert count == 0

@@ -99,13 +99,13 @@ def test_resolver_matches_alt_by_native_cdid_only() -> None:
     assert len(missing) == 8
 
 
-def test_resolver_rejects_duplicate_alt_cdid() -> None:
+def test_resolver_rejects_duplicate_ex_cpi_cdid() -> None:
     catalog = {
         "EXCPI_INDEX_A01_DKC6": {"family": "INDEX", "native_id": "DKC6"},
         "EXCPI_INDEX_A99_DKC6": {"family": "INDEX", "native_id": "DKC6"},
     }
 
-    with pytest.raises(ValueError, match="duplicate ALT CDID DKC6"):
+    with pytest.raises(ValueError, match="duplicate EX-CPI CDID DKC6"):
         resolve_table38_alt_series(catalog)
 
 

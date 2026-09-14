@@ -13,11 +13,21 @@ from datetime import UTC, date, datetime
 from sqlalchemy.engine import Engine
 
 from scripts.config import (
-    DEFAULT_START_DATE, LOG_LEVEL, MAX_WAIT, POLL_INTERVAL,
-    START_DATE_LOOKBACK_MONTHS, missing_environment, unresolved_credentials,
+    DEFAULT_START_DATE,
+    LOG_LEVEL,
+    MAX_WAIT,
+    POLL_INTERVAL,
+    START_DATE_LOOKBACK_MONTHS,
+    missing_environment,
+    unresolved_credentials,
 )
 from scripts.db import build_engine
-from scripts.extract import collect_raw_data, get_last_publish_date, get_series_catalog, get_workbook_fingerprint
+from scripts.extract import (
+    collect_raw_data,
+    get_last_publish_date,
+    get_series_catalog,
+    get_workbook_fingerprint,
+)
 from scripts.init_db import init_db
 from scripts.metadata import assert_current_series_ids, upsert_metadata
 from scripts.original_weights import upsert_original_weights
@@ -174,7 +184,7 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
         "MM23 published 12-month rates",
     )
 
-    release_date = get_last_publish_date() or date.today()
+    release_date = get_last_publish_date() or datetime.now(UTC).date()
     snapshot_map = january_regime_snapshots(discover_mm23_snapshots())
     first_year = max(DOUBLE_WEIGHT_START_YEAR, start.year)
     january_panels = collect_january_weight_panels(

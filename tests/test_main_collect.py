@@ -31,25 +31,25 @@ def _patch_pipeline(
     observations: dict[date, dict[str, float]],
 ) -> list[str]:
     calls: list[str] = []
-    monkeypatch.setattr(main, "init_db", lambda _engine: calls.append("init_db"))
+    monkeypatch.setattr(main, "init_db", lambda _engine: (calls.append("init_db"), None)[1])
     monkeypatch.setattr(main, "get_max_reference_date", lambda _engine: None)
     monkeypatch.setattr(main, "DEFAULT_START_DATE", requested)
     monkeypatch.setattr(
         main,
         "collect_raw_data",
-        lambda start: calls.append(f"table38:{start.isoformat()}") or observations,
+        lambda start: (calls.append(f"table38:{start.isoformat()}"), observations)[1],
     )
     monkeypatch.setattr(main, "collect_mm23_special_aggregates", lambda: object())
     monkeypatch.setattr(
         main,
         "complement_weight_checks",
-        lambda _panel: calls.append("mm23") or [{"passed": True, "residual": 0.0}],
+        lambda _panel: (calls.append("mm23"), [{"passed": True, "residual": 0.0}])[1],
     )
     monkeypatch.setattr(
         main,
         "published_12m_rate_checks",
         lambda _table38, _catalog, _panel: (
-            calls.append("rates") or [{"passed": True, "residual_pp": 0.0}]
+            calls.append("rates"), [{"passed": True, "residual_pp": 0.0}]\n        )[1]
         ),
     )
     monkeypatch.setattr(main, "get_series_catalog", _catalog)
@@ -57,7 +57,7 @@ def _patch_pipeline(
     monkeypatch.setattr(
         main,
         "discover_mm23_snapshots",
-        lambda: calls.append("snapshots") or [],
+        lambda: (calls.append("snapshots"), [])[1],
     )
     monkeypatch.setattr(main, "january_regime_snapshots", lambda _snapshots: {})
     monkeypatch.setattr(main, "collect_january_weight_panels", lambda *args, **kwargs: {})

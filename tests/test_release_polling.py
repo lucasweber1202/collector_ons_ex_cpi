@@ -25,11 +25,11 @@ def test_unchanged_workbook_downloads_once(monkeypatch: pytest.MonkeyPatch) -> N
     _bounded_clock(monkeypatch)
     downloads: list[date] = []
     monkeypatch.setattr(main, "get_workbook_fingerprint", lambda: '"same"')
-    monkeypatch.setattr(
-        main,
-        "collect_raw_data",
-        lambda start: (downloads.append(start), {LATEST: {"EXCPI_INDEX_NATIVE_DKC6": 100.0}})[1],
-    )
+    def collect(start: date) -> dict[date, dict[str, float | None]]:
+        downloads.append(start)
+        return {LATEST: {"EXCPI_INDEX_NATIVE_DKC6": 100.0}}
+
+    monkeypatch.setattr(main, "collect_raw_data", collect)
     assert main._wait_for_release(LATEST) is None
     assert len(downloads) == 1
 

@@ -47,8 +47,8 @@ def _weight_panel(values_by_year: dict[int, float]) -> MM23SpecialPanel:
 
 def _alt_catalog() -> dict[str, dict[str, str]]:
     return {
-        f"CPI_ALT_A{index:02d}_{aggregate['index_cdid']}": {
-            "family": "ALT",
+        f"EXCPI_INDEX_A{index:02d}_{aggregate['index_cdid']}": {
+            "family": "INDEX",
             "native_id": aggregate["index_cdid"],
         }
         for index, aggregate in enumerate(EX_CPI_SPECIAL_AGGREGATES, start=1)

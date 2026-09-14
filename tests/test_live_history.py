@@ -85,7 +85,7 @@ def test_historical_mm23_snapshot_matrix() -> None:
             try:
                 january = collect_mm23_snapshot(snapshot)
                 january_error = _weight_panel_error(january.annual_weights.get(year), year)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - report every source failure
                 january_error = f"snapshot unavailable/invalid: {exc}"
             errors = [error for error in (january_error, feb_dec_error) if error]
             status = "FAIL" if errors else "PASS"

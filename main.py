@@ -155,6 +155,18 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
             return 0
         start = min(observations)
 
+    # observations deliberately retains the preceding 12 months so the
+    # published 12-month MM23 rates can be reconciled. The operational
+    # collection window starts at start: lookback months are read-only
+    # validation context and must not be backfilled or re-vintaged.
+    stored_observations = {
+        reference_date: values
+        for reference_date, values in observations.items()
+        if reference_date >= start
+    }
+    if not stored_observations:
+        raise ValueError(f"No EX-CPI observations in persistable window starting {start}")
+
     panel = collect_mm23_special_aggregates()
     _validate(complement_weight_checks(panel), "MM23 complement weights")
     _validate(

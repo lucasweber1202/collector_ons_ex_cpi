@@ -7,6 +7,8 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+import pytest
+
 import main
 
 
@@ -25,7 +27,7 @@ def _catalog() -> dict[str, dict[str, str]]:
 
 
 def test_collect_persists_only_requested_window_and_completes_transaction(
-    engine: Engine, monkeypatch
+    engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Lookback drives validation only; the requested month is the stored product."""
     lookback = date(2025, 1, 1)

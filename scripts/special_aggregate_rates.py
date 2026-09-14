@@ -35,7 +35,7 @@ def published_12m_rate_checks(
     """
     resolved, missing = resolve_table38_alt_series(catalog)
     if missing:
-        raise ValueError(f"Cannot validate MM23 rates; Table 38 ALT CDIDs missing: {missing}")
+        raise ValueError(f"Cannot validate MM23 rates; Table 38 EX-CPI index CDIDs missing: {missing}")
 
     checks: list[dict[str, object]] = []
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:

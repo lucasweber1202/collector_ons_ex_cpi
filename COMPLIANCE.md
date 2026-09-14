@@ -56,7 +56,7 @@ The implementation fails rather than infers January from the February–December
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Transaction rollback after time-series/original-weights writes | SKIP — not yet implemented/executed | Add a PostgreSQL-backed failure-injection regression before promotion. |
+| Transaction rollback after time-series/original-weights writes | SKIP — regression not executed | tests/test_main_collect.py injects a metadata failure after time-series and original-weights writes; run it against PostgreSQL before promotion. |
 
 ## Databricks
 

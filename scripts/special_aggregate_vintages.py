@@ -156,7 +156,12 @@ def january_regime_snapshots(
         if snapshot.reason != "scheduled":
             continue
         if year in selected:
-            raise ValueError(f"Two scheduled March MM23 snapshots found for {year}")
+            previous = selected[year]
+            raise ValueError(
+                "Two scheduled March MM23 snapshots found for "
+                f"{year}: {previous.version_id} at {previous.superseded_at.isoformat()} and "
+                f"{snapshot.version_id} at {snapshot.superseded_at.isoformat()}"
+            )
         selected[year] = snapshot
     return selected
 

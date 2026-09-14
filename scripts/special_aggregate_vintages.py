@@ -161,18 +161,18 @@ def january_regime_snapshots(
     return selected
 
 
-def _exclusion_weights(panel: MM23SpecialPanel, year: int) -> dict[str, float]:
-    """Return every reviewed exclusion weight for one MM23 year or fail."""
+def _official_weights(panel: MM23SpecialPanel, year: int) -> dict[str, float]:
+    """Return reviewed exclusion and complement weights for one MM23 year or fail."""
     values = panel.annual_weights.get(year)
     if values is None:
         raise ValueError(f"MM23 panel contains no annual weights for {year}")
     weights: dict[str, float] = {}
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:
-        cdid = aggregate["weight_cdid"]
-        value = values.get(cdid)
-        if value is None:
-            raise ValueError(f"MM23 panel has no {cdid} exclusion weight for {year}")
-        weights[cdid] = value
+        for cdid in (aggregate["weight_cdid"], aggregate["complement_weight_cdid"]):
+            value = values.get(cdid)
+            if value is None:
+                raise ValueError(f"MM23 panel has no {cdid} official weight for {year}")
+            weights[cdid] = value
     return weights
 
 
@@ -201,7 +201,7 @@ def build_exclusion_weight_regimes(
     for year in years:
         if year > current_release_date.year:
             continue
-        current_weights = _exclusion_weights(current, year)
+        current_weights = _official_weights(current, year)
         if year < DOUBLE_WEIGHT_START_YEAR:
             for month in range(1, 13):
                 expanded[date(year, month, 1)] = dict(current_weights)
@@ -216,7 +216,7 @@ def build_exclusion_weight_regimes(
         january_panel = january_panels.get(year)
         if january_panel is None:
             raise ValueError(f"Missing archived January MM23 weight panel for {year}")
-        expanded[date(year, 1, 1)] = _exclusion_weights(january_panel, year)
+        expanded[date(year, 1, 1)] = _official_weights(january_panel, year)
         for month in range(2, 13):
             expanded[date(year, month, 1)] = dict(current_weights)
     return expanded
@@ -260,7 +260,7 @@ def mm23_original_weight_id(weight_cdid: str) -> str:
     native = re.sub(r"[^A-Z0-9]+", "", weight_cdid.strip().upper())
     if not native:
         raise ValueError("MM23 weight CDID is empty")
-    return f"CPI_MM23_{native}"
+    return f"EXCPI_WEIGHT_NATIVE_{native}"
 
 
 def build_mm23_original_weight_layer(
@@ -282,17 +282,20 @@ def build_mm23_original_weight_layer(
     audit: dict[str, dict[str, str]] = {}
     source_id_by_weight: dict[str, str] = {}
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:
-        weight_cdid = aggregate["weight_cdid"]
-        source_id = mm23_original_weight_id(weight_cdid)
-        source_id_by_weight[weight_cdid] = source_id
-        audit[source_id] = {
-            "code": weight_cdid,
-            "name": aggregate["label"],
-            "native_id": weight_cdid,
-            "mapped_series_id": resolved[aggregate["index_cdid"]],
-            "dataset": MM23_WEIGHT_DATASET,
-            "source_url": MM23_DATASET_URL,
-        }
+        for weight_cdid, suffix in (
+            (aggregate["weight_cdid"], "exclusion"),
+            (aggregate["complement_weight_cdid"], "complement"),
+        ):
+            source_id = mm23_original_weight_id(weight_cdid)
+            source_id_by_weight[weight_cdid] = source_id
+            audit[source_id] = {
+                "code": weight_cdid,
+                "name": f"{aggregate['label']} ({suffix} weight)",
+                "native_id": weight_cdid,
+                "mapped_series_id": resolved[aggregate["index_cdid"]],
+                "dataset": MM23_WEIGHT_DATASET,
+                "source_url": MM23_DATASET_URL,
+            }
 
     originals: dict[date, dict[str, float]] = {}
     for month, values in regimes.items():

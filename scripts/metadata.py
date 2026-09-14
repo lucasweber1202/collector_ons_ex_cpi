@@ -45,29 +45,20 @@ _MERGE_DIALECTS = frozenset({"databricks", "postgresql"})
 
 # Index references differ by published layer and must never be conflated.
 _INDEX_REFERENCE = {
-    "COICOP": "index reference 2015=100",
-    "ALT": "index reference 2015=100",
-    "CS": "index re-referenced to 100 each January",
+    "INDEX": "index reference 2015=100",
 }
 _LEVEL_LABELS = {
-    "all_items": "all items",
-    "division": "COICOP division",
-    "group": "COICOP group",
-    "class": "COICOP class",
-    "analytical_aggregate": "ONS analytical aggregate",
-    "consumption_segment": "ONS consumption segment",
+    "special_aggregate": "ONS CPI exclusion aggregate",
 }
 
 
 def legacy_identifier_sql(table: str) -> TextClause:
     """Count rows still using the superseded name-bearing identifier spelling.
 
-    The old spelling appended the official name, so it always carries more than
-    the three underscores of ``CPI_{family}_{node}_{native_id}``.
+    Legacy UK-CPI identifiers begin with CPI_; this collector uses EXCPI_.
     """
     return text(
-        f"SELECT COUNT(*) FROM {table} WHERE series_id LIKE 'CPI%' "
-        "AND LENGTH(series_id) - LENGTH(REPLACE(series_id, '_', '')) > 3"
+        f"SELECT COUNT(*) FROM {table} WHERE series_id LIKE 'CPI_%'"
     )
 
 

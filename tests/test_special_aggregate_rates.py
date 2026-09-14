@@ -22,9 +22,9 @@ def _rate_fixture() -> tuple[
     current: dict[str, float | None] = {}
     rates: dict[str, float] = {}
     for index, aggregate in enumerate(EX_CPI_SPECIAL_AGGREGATES, start=1):
-        series_id = f"CPI_ALT_A{index:02d}_{aggregate['index_cdid']}"
+        series_id = f"EXCPI_INDEX_A{index:02d}_{aggregate['index_cdid']}"
         catalog[series_id] = {
-            "family": "ALT",
+            "family": "INDEX",
             "native_id": aggregate["index_cdid"],
         }
         previous[series_id] = 100.0

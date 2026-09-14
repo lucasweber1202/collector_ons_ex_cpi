@@ -1,10 +1,6 @@
 """Reviewed ONS MM23 crosswalk and source checks for CPI exclusion aggregates.
 
-This module deliberately does not persist MM23 weights yet. The source publishes
-those weights as annual observations while this collector's existing
-``original_weights`` contract is reference-month based. Until that storage
-semantics is explicitly resolved, MM23 is used as a source-verified identity and
-validation layer over Table 38 ``ALT`` series.
+MM23 weights are persisted by the standalone pipeline with explicit monthly regime and vintage semantics; published rates remain validation-only.
 """
 
 from __future__ import annotations
@@ -206,17 +202,17 @@ def required_mm23_cdids() -> frozenset[str]:
 def resolve_table38_alt_series(
     catalog: Mapping[str, Mapping[str, str]],
 ) -> tuple[dict[str, str], list[str]]:
-    """Resolve reviewed MM23 index CDIDs onto already-collected Table 38 ALT IDs.
+    """Resolve reviewed MM23 index CDIDs onto already-collected Table 38 EX-CPI IDs.
 
     Returns ``(resolved, missing)`` where ``resolved`` maps the MM23 index CDID
     to this collector's stable ``series_id``. Resolution is exact on the native
-    ONS CDID and only accepts the ``ALT`` family; no name/fuzzy fallback exists.
+    ONS CDID and only accepts the selective ``INDEX`` family; no name/fuzzy fallback exists.
     Missing rows are reported rather than fabricated so the caller can decide
     whether a source release changed scope.
     """
     by_native: dict[str, list[str]] = {}
     for series_id, fields in catalog.items():
-        if fields.get("family") != "ALT":
+        if fields.get("family") != "INDEX":
             continue
         native_id = str(fields.get("native_id", "")).upper()
         if native_id:
@@ -228,7 +224,7 @@ def resolve_table38_alt_series(
         native_id = row["index_cdid"]
         candidates = by_native.get(native_id, [])
         if len(candidates) > 1:
-            raise ValueError(f"Table 38 publishes duplicate ALT CDID {native_id}: {candidates}")
+            raise ValueError(f"Table 38 publishes duplicate EX-CPI CDID {native_id}: {candidates}")
         if not candidates:
             missing.append(native_id)
             continue

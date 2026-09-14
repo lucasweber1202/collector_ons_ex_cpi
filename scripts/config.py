@@ -25,7 +25,6 @@ SCHEMA_NAME = "collector_ons_ex_cpi"
 CATALOG_NAME = "macrobond_inhouse"
 METADATA_TABLE = "metadata"
 TIME_SERIES_TABLE = "time_series"
-WEIGHTS_TABLE = "weights"
 ORIGINAL_WEIGHTS_TABLE = "original_weights"
 LOGS_TABLE = "logs"
 
@@ -35,11 +34,6 @@ DATABASE_URL = os.getenv("COLLECTOR_DB_URL", "")
 DEFAULT_START_DATE = date.fromisoformat(os.getenv("COLLECTOR_START_DATE", "1988-01-01"))
 
 REQUEST_TIMEOUT = float(os.getenv("COLLECTOR_HTTP_TIMEOUT", "60"))
-# One monthly consumption-segment file per request means a full historical build
-# issues ~20 downloads in a row. ONS fronts its file endpoint with a rate limiter
-# that answers a burst with HTTP 200 and a plain-text notice instead of the file,
-# so a small inter-file pause is part of the documented source contract, not a
-# politeness default.
 DOWNLOAD_DELAY = float(os.getenv("COLLECTOR_DOWNLOAD_DELAY", "2"))
 MAX_RETRIES = int(os.getenv("COLLECTOR_MAX_RETRIES", "3"))
 BACKOFF_FACTOR = float(os.getenv("COLLECTOR_BACKOFF_FACTOR", "2"))
@@ -59,22 +53,6 @@ LOG_LEVEL = os.getenv("COLLECTOR_LOG_LEVEL", "INFO")
 POLL_INTERVAL = float(os.getenv("COLLECTOR_POLL_INTERVAL", "30"))
 MAX_WAIT = float(os.getenv("COLLECTOR_MAX_WAIT", "900"))
 VALIDATION_TOLERANCE_PP = float(os.getenv("COLLECTOR_VALIDATION_TOLERANCE_PP", "0.10"))
-# Share of reconcilable checks that must actually run on every invocation.
-# Measured coverage on the current published workbook is 1.0000 for both checks,
-# so this floor only trips on a real regression such as a renamed Table 38 column
-# or a lost W1 row family, while tolerating a handful of unmatchable parents.
-MIN_VALIDATION_COVERAGE = float(os.getenv("COLLECTOR_MIN_VALIDATION_COVERAGE", "0.99"))
-# Consumption segments reconcile their published parent far more tightly than
-# this default (measured median 0.0003 pp, 99th percentile 0.011 pp over the
-# full published panel). The looser default covers actual rentals for housing,
-# where ONS builds the published class partly from administrative sources that
-# are not published as consumption segments; the measured maximum there is
-# 0.34 pp. Tightening it below that figure requires excluding that parent.
-SEGMENT_TOLERANCE_PP = float(os.getenv("COLLECTOR_SEGMENT_TOLERANCE_PP", "0.50"))
-# Published segment weights must never exceed their parent's basket weight and
-# must cover at least this share of it. Measured coverage is 1.0000 for every
-# parent except actual rentals for housing at 0.9235.
-MIN_SEGMENT_WEIGHT_RATIO = float(os.getenv("COLLECTOR_MIN_SEGMENT_WEIGHT_RATIO", "0.90"))
 
 DBX_SERVER_HOSTNAME = os.getenv("DBX_SERVER_HOSTNAME", "")
 DBX_HTTP_PATH = os.getenv("DBX_HTTP_PATH", "")

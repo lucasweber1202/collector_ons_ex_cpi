@@ -46,9 +46,9 @@ def _weight_panel(values_by_year: dict[int, float]) -> MM23SpecialPanel:
     return MM23SpecialPanel(annual_weights=annual, monthly_indices={}, monthly_rates_12m={})
 
 
-def _alt_catalog() -> dict[str, dict[str, str]]:
+def _catalog() -> dict[str, dict[str, str]]:
     return {
-        f"EXCPI_INDEX_A{index:02d}_{aggregate['index_cdid']}": {
+        f"EXCPI_INDEX_NATIVE_{aggregate['index_cdid']}": {
             "family": "INDEX",
             "native_id": aggregate["index_cdid"],
         }
@@ -166,7 +166,7 @@ def test_pre_2017_weight_applies_to_all_twelve_months_without_archive() -> None:
     assert all(values["A9FU"] == 788.0 for values in expanded.values())
 
 
-def test_weight_regimes_map_onto_existing_alt_series_ids() -> None:
+def test_weight_regimes_map_onto_existing_index_series_ids() -> None:
     regimes = {
         date(2026, 1, 1): {
             aggregate["weight_cdid"]: 700.0 + index
@@ -174,26 +174,26 @@ def test_weight_regimes_map_onto_existing_alt_series_ids() -> None:
         }
     }
 
-    mapped = map_exclusion_weight_regimes_to_table38(regimes, _alt_catalog())
+    mapped = map_exclusion_weight_regimes_to_table38(regimes, _catalog())
 
     core_series = next(
-        series_id for series_id in _alt_catalog() if series_id.endswith("_DKC6")
+        series_id for series_id in _catalog() if series_id.endswith("_DKC6")
     )
     assert mapped[date(2026, 1, 1)][core_series] == 702.0
     assert len(mapped[date(2026, 1, 1)]) == len(EX_CPI_SPECIAL_AGGREGATES)
 
 
-def test_weight_regime_mapping_rejects_missing_alt_target() -> None:
+def test_weight_regime_mapping_rejects_missing_index_target() -> None:
     regimes = {
         date(2026, 1, 1): {
             aggregate["weight_cdid"]: 800.0 for aggregate in EX_CPI_SPECIAL_AGGREGATES
         }
     }
-    catalog = _alt_catalog()
+    catalog = _catalog()
     missing = next(series_id for series_id in catalog if series_id.endswith("_DKC6"))
     del catalog[missing]
 
-    with pytest.raises(ValueError, match="Table 38 ALT CDIDs missing.*DKC6"):
+    with pytest.raises(ValueError, match="Table 38 EX-CPI index CDIDs missing.*DKC6"):
         map_exclusion_weight_regimes_to_table38(regimes, catalog)
 
 
@@ -205,7 +205,7 @@ def test_mm23_original_weight_layer_preserves_source_cdid_and_alt_mapping() -> N
         }
     }
 
-    originals, audit = build_mm23_original_weight_layer(regimes, _alt_catalog())
+    originals, audit = build_mm23_original_weight_layer(regimes, _catalog())
 
     assert originals[date(2026, 1, 1)]["EXCPI_WEIGHT_NATIVE_A9FU"] == 702.0
     assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["native_id"] == "A9FU"

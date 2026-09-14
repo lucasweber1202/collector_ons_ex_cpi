@@ -25,6 +25,7 @@ def test_unchanged_workbook_downloads_once(monkeypatch: pytest.MonkeyPatch) -> N
     _bounded_clock(monkeypatch)
     downloads: list[date] = []
     monkeypatch.setattr(main, "get_workbook_fingerprint", lambda: '"same"')
+
     def collect(start: date) -> dict[date, dict[str, float | None]]:
         downloads.append(start)
         return {LATEST: {"EXCPI_INDEX_NATIVE_DKC6": 100.0}}

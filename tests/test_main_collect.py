@@ -49,8 +49,9 @@ def _patch_pipeline(
         main,
         "published_12m_rate_checks",
         lambda _table38, _catalog, _panel: (
-            calls.append("rates"), [{"passed": True, "residual_pp": 0.0}]\n        )[1]
-        ),
+            calls.append("rates"),
+            [{"passed": True, "residual_pp": 0.0}],
+        )[1],
     )
     monkeypatch.setattr(main, "get_series_catalog", _catalog)
     monkeypatch.setattr(main, "get_last_publish_date", lambda: date(2026, 2, 18))

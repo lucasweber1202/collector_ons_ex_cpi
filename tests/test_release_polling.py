@@ -28,7 +28,7 @@ def test_unchanged_workbook_downloads_once(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(
         main,
         "collect_raw_data",
-        lambda start: downloads.append(start) or {LATEST: {"EXCPI_INDEX_NATIVE_DKC6": 100.0}},
+        lambda start: (downloads.append(start), {LATEST: {"EXCPI_INDEX_NATIVE_DKC6": 100.0}})[1],
     )
     assert main._wait_for_release(LATEST) is None
     assert len(downloads) == 1

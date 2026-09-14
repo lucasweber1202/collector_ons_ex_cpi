@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from scripts.config import LOGS_TABLE, METADATA_TABLE, SCHEMA_NAME, TIME_SERIES_TABLE, WEIGHTS_TABLE
+from scripts.config import LOGS_TABLE, METADATA_TABLE, SCHEMA_NAME, TIME_SERIES_TABLE
 from scripts.db import build_engine
 
 # PostgreSQL and Databricks SQL share no spelling for a 64-bit float. Spark's
@@ -46,18 +46,7 @@ CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{TIME_SERIES_TABLE} (
     collected_at TIMESTAMP NOT NULL,
     CONSTRAINT pk_time_series PRIMARY KEY (series_id, reference_date, vintage_date)
 )
-"""
-CREATE_WEIGHTS_TABLE = f"""
-CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{WEIGHTS_TABLE} (
-    series_id VARCHAR(200) NOT NULL,
-    reference_date DATE NOT NULL,
-    vintage_date DATE NOT NULL,
-    weight {{double}} NOT NULL,
-    collected_at TIMESTAMP NOT NULL,
-    CONSTRAINT pk_weights PRIMARY KEY (series_id, reference_date, vintage_date)
-)
-"""
-CREATE_LOGS_TABLE = f"""
+"""CREATE_LOGS_TABLE = f"""
 CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{LOGS_TABLE} (
     id BIGINT GENERATED ALWAYS AS IDENTITY,
     started_at TIMESTAMP NOT NULL,
@@ -96,7 +85,6 @@ def init_db(engine: Engine) -> None:
             CREATE_SCHEMA,
             CREATE_METADATA_TABLE,
             CREATE_TIME_SERIES_TABLE.format(double=double),
-            CREATE_WEIGHTS_TABLE.format(double=double),
             CREATE_ORIGINAL_WEIGHTS_TABLE.format(double=double),
             CREATE_LOGS_TABLE,
         ):

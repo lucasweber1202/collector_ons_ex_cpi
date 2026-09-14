@@ -168,8 +168,7 @@ def _official_weights(panel: MM23SpecialPanel, year: int) -> dict[str, float]:
         raise ValueError(f"MM23 panel contains no annual weights for {year}")
     weights: dict[str, float] = {}
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:
-        for role in ("weight_cdid", "complement_weight_cdid"):
-            cdid = aggregate[role]
+        for cdid in (aggregate["weight_cdid"], aggregate["complement_weight_cdid"]):
             value = values.get(cdid)
             if value is None:
                 raise ValueError(f"MM23 panel has no {cdid} official weight for {year}")
@@ -283,8 +282,10 @@ def build_mm23_original_weight_layer(
     audit: dict[str, dict[str, str]] = {}
     source_id_by_weight: dict[str, str] = {}
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:
-        for role, suffix in (("weight_cdid", "exclusion"), ("complement_weight_cdid", "complement")):
-            weight_cdid = aggregate[role]
+        for weight_cdid, suffix in (
+            (aggregate["weight_cdid"], "exclusion"),
+            (aggregate["complement_weight_cdid"], "complement"),
+        ):
             source_id = mm23_original_weight_id(weight_cdid)
             source_id_by_weight[weight_cdid] = source_id
             audit[source_id] = {

@@ -20,9 +20,7 @@ from scripts.special_aggregates import (
 )
 
 
-def _scheduled_march_candidates(
-    snapshots: list[MM23Snapshot], year: int
-) -> list[MM23Snapshot]:
+def _scheduled_march_candidates(snapshots: list[MM23Snapshot], year: int) -> list[MM23Snapshot]:
     return [
         snapshot
         for snapshot in snapshots
@@ -42,9 +40,7 @@ def _weight_panel_error(values: dict[str, float] | None, year: int) -> str | Non
                 return f"reviewed CDID {cdid} missing"
             checked.add(cdid)
         residual = abs(
-            values[aggregate["weight_cdid"]]
-            + values[aggregate["complement_weight_cdid"]]
-            - 1000.0
+            values[aggregate["weight_cdid"]] + values[aggregate["complement_weight_cdid"]] - 1000.0
         )
         if residual > MM23_WEIGHT_SUM_TOLERANCE:
             return f"{aggregate['label']} residual {residual:.10f}"
@@ -60,7 +56,9 @@ def test_historical_mm23_snapshot_matrix() -> None:
     end_year = datetime.now(UTC).year
     failures: list[str] = []
 
-    print("| Year | January snapshot/version | Superseded date | Reason | Feb-Dec regime | Status |")
+    print(
+        "| Year | January snapshot/version | Superseded date | Reason | Feb-Dec regime | Status |"
+    )
     print("|---|---|---|---|---|---|")
     for year in range(DOUBLE_WEIGHT_START_YEAR, end_year + 1):
         candidates = _scheduled_march_candidates(snapshots, year)
@@ -95,9 +93,6 @@ def test_historical_mm23_snapshot_matrix() -> None:
         if status != "PASS":
             failures.append(f"{year}: {status} — {reason}")
         regime = f"MM23 annual {year}" if feb_dec_error is None else feb_dec_error
-        print(
-            f"| {year} | {snapshot_label} | {superseded} | {reason} | "
-            f"{regime} | {status} |"
-        )
+        print(f"| {year} | {snapshot_label} | {superseded} | {reason} | {regime} | {status} |")
 
     assert not failures, "\n".join(failures)

@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 SOURCE_NAME = "Office for National Statistics"
 RELEASE_NAME = "Consumer price inflation: special aggregates"
 COUNTRY_CURRENCY = "GBR"
-SOURCE_URL = "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation"
+SOURCE_URL = (
+    "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation"
+)
 CPI_DOWNLOAD_URL = (
     "https://www.ons.gov.uk/file?uri=%2Feconomy%2Finflationandpriceindices%2Fdatasets%2F"
     "consumerpriceinflation%2Fcurrent%2Fconsumerpriceinflationdetailedreferencetables.xlsx"
@@ -130,7 +132,8 @@ def http_get(client: httpx.Client, url: str, method: str = "GET") -> httpx.Respo
                     return httpx.Response(
                         streamed.status_code,
                         headers=[
-                            (name, value) for name, value in streamed.headers.multi_items()
+                            (name, value)
+                            for name, value in streamed.headers.multi_items()
                             if name.lower() not in _TRANSFER_HEADERS
                         ],
                         content=body,
@@ -146,7 +149,9 @@ def http_get(client: httpx.Client, url: str, method: str = "GET") -> httpx.Respo
             last_error = exc
         if attempt < MAX_RETRIES:
             delay = _retry_delay(attempt, response)
-            logger.warning("ONS request failed; retrying in %.1fs (%d/%d)", delay, attempt + 1, MAX_RETRIES)
+            logger.warning(
+                "ONS request failed; retrying in %.1fs (%d/%d)", delay, attempt + 1, MAX_RETRIES
+            )
             time.sleep(delay)
     assert last_error is not None
     raise last_error
@@ -154,7 +159,9 @@ def http_get(client: httpx.Client, url: str, method: str = "GET") -> httpx.Respo
 
 def _excel_frame(blob: bytes, sheet_name: str) -> pd.DataFrame:
     try:
-        return pd.read_excel(io.BytesIO(blob), sheet_name=sheet_name, header=None, engine="openpyxl")
+        return pd.read_excel(
+            io.BytesIO(blob), sheet_name=sheet_name, header=None, engine="openpyxl"
+        )
     except ValueError as exc:
         raise ValueError(f"ONS workbook has no sheet {sheet_name!r}: {exc}") from exc
 
@@ -243,8 +250,7 @@ def parse_cpi_workbook(
         if month is None or (start_date and month < start_date.replace(day=1)):
             continue
         parsed[month] = {
-            series_id: _cell_float(frame.iat[row, column])
-            for column, series_id in columns.items()
+            series_id: _cell_float(frame.iat[row, column]) for column, series_id in columns.items()
         }
     if not parsed:
         raise ValueError("Table 38 contained no EX-CPI observations")

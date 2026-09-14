@@ -23,13 +23,7 @@ def _row(version: str, reason: str, superseded: str) -> str:
         "consumerpriceindices%2Fcurrent%2Fprevious%2F"
         f"{version}%2Fmm23.csv"
     )
-    return (
-        "<tr>"
-        f'<td><a href="{href}">csv</a></td>'
-        f"<td>{reason}</td>"
-        f"<td>{superseded}</td>"
-        "</tr>"
-    )
+    return f'<tr><td><a href="{href}">csv</a></td><td>{reason}</td><td>{superseded}</td></tr>'
 
 
 def _page(*rows: str) -> str:
@@ -180,9 +174,7 @@ def test_weight_regimes_map_onto_existing_index_series_ids() -> None:
 
     mapped = map_exclusion_weight_regimes_to_table38(regimes, _catalog())
 
-    core_series = next(
-        series_id for series_id in _catalog() if series_id.endswith("_DKC6")
-    )
+    core_series = next(series_id for series_id in _catalog() if series_id.endswith("_DKC6"))
     assert mapped[date(2026, 1, 1)][core_series] == 702.0
     assert len(mapped[date(2026, 1, 1)]) == len(EX_CPI_SPECIAL_AGGREGATES)
 

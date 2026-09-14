@@ -48,8 +48,9 @@ def _patch_pipeline(
     monkeypatch.setattr(
         main,
         "published_12m_rate_checks",
-        lambda _table38, _catalog, _panel: calls.append("rates")
-        or [{"passed": True, "residual_pp": 0.0}],
+        lambda _table38, _catalog, _panel: (
+            calls.append("rates") or [{"passed": True, "residual_pp": 0.0}]
+        ),
     )
     monkeypatch.setattr(main, "get_series_catalog", _catalog)
     monkeypatch.setattr(main, "get_last_publish_date", lambda: date(2026, 2, 18))
@@ -101,15 +102,19 @@ def test_collect_persists_only_requested_window_and_completes_transaction(
         "snapshots",
     ]
     with engine.connect() as conn:
-        assert conn.execute(
-            text("SELECT COUNT(*) FROM collector_ons_ex_cpi.time_series")
-        ).scalar() == 1
-        assert conn.execute(
-            text("SELECT COUNT(*) FROM collector_ons_ex_cpi.metadata")
-        ).scalar() == 1
-        assert conn.execute(
-            text("SELECT COUNT(*) FROM collector_ons_ex_cpi.original_weights")
-        ).scalar() == 1
+        assert (
+            conn.execute(text("SELECT COUNT(*) FROM collector_ons_ex_cpi.time_series")).scalar()
+            == 1
+        )
+        assert (
+            conn.execute(text("SELECT COUNT(*) FROM collector_ons_ex_cpi.metadata")).scalar() == 1
+        )
+        assert (
+            conn.execute(
+                text("SELECT COUNT(*) FROM collector_ons_ex_cpi.original_weights")
+            ).scalar()
+            == 1
+        )
         assert conn.execute(
             text("SELECT reference_date, value FROM collector_ons_ex_cpi.time_series")
         ).one() == (requested, 102.5)

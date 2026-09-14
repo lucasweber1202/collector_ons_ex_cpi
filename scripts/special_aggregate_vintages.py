@@ -27,8 +27,7 @@ from scripts.special_aggregates import (
 )
 
 MM23_VERSIONS_URL = (
-    "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceindices/"
-    "current"
+    "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceindices/current"
 )
 DOUBLE_WEIGHT_START_YEAR = 2017
 MM23_WEIGHT_DATASET = "ONS Consumer price inflation time series (MM23) special aggregate weights"
@@ -104,9 +103,7 @@ def parse_mm23_snapshot_index(page_html: str) -> list[MM23Snapshot]:
         date_match = _DATE_RE.search(row_text)
         if date_match is None:
             continue
-        superseded_at = datetime.strptime(
-            date_match.group(1), "%d %B %Y %H:%M"
-        ).replace(tzinfo=UTC)
+        superseded_at = datetime.strptime(date_match.group(1), "%d %B %Y %H:%M").replace(tzinfo=UTC)
         csv_candidates: list[tuple[str, str]] = []
         for raw_href in hrefs:
             href = html.unescape(raw_href)

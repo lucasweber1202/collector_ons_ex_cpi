@@ -124,7 +124,11 @@ def _validate(checks: list[dict[str, object]], label: str) -> None:
     median = residuals[len(residuals) // 2]
     logger.info(
         "%s checks=%d failures=%d max_residual=%.6f median_residual=%.6f",
-        label, len(checks), len(failures), max(residuals), median,
+        label,
+        len(checks),
+        len(failures),
+        max(residuals),
+        median,
     )
     if failures:
         raise ValueError(f"{label}: {len(failures)} checks outside tolerance")
@@ -187,9 +191,13 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     release_date = get_last_publish_date() or datetime.now(UTC).date()
     snapshot_map = january_regime_snapshots(discover_mm23_snapshots())
     first_year = max(DOUBLE_WEIGHT_START_YEAR, start.year)
-    january_panels = collect_january_weight_panels(
-        snapshot_map, start_year=first_year, end_year=release_date.year - 1
-    ) if release_date.year - 1 >= first_year else {}
+    january_panels = (
+        collect_january_weight_panels(
+            snapshot_map, start_year=first_year, end_year=release_date.year - 1
+        )
+        if release_date.year - 1 >= first_year
+        else {}
+    )
     regimes = build_exclusion_weight_regimes(
         panel, release_date, january_panels, start_year=start.year
     )
@@ -206,8 +214,12 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     logger.info(
         "Run result: observations=%d vintages=%d official_weights=%d "
         "weight_vintages=%d metadata_inserted=%d metadata_updated=%d",
-        new_obs, new_vintages, new_weights, weight_vintages,
-        metadata_inserted, metadata_updated,
+        new_obs,
+        new_vintages,
+        new_weights,
+        weight_vintages,
+        metadata_inserted,
+        metadata_updated,
     )
     return 0
 
@@ -243,8 +255,12 @@ def run(argv: list[str] | None = None) -> int:
             log_engine = build_engine()
             init_db(log_engine)
             insert_run_log(
-                log_engine, started_at, finished_at, status,
-                log_buffer.getvalue(), traceback_text,
+                log_engine,
+                started_at,
+                finished_at,
+                status,
+                log_buffer.getvalue(),
+                traceback_text,
             )
         except Exception:
             logger.exception("Could not persist run log")

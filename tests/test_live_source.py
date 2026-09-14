@@ -23,17 +23,15 @@ def test_live_ons_ex_cpi_scope_and_reconciliation() -> None:
     observations = collect_raw_data(date(2000, 1, 1))
     catalog = get_series_catalog()
     assert len(catalog) == 10
-    assert {fields['native_id'] for fields in catalog.values()} == TARGET_CDIDS
+    assert {fields["native_id"] for fields in catalog.values()} == TARGET_CDIDS
     assert all(len(values) == 10 for values in observations.values())
     assert len(required_mm23_cdids()) == 60
 
     mm23 = collect_mm23_special_aggregates()
     weight_checks = complement_weight_checks(mm23, latest_only=True)
-    rate_checks = published_12m_rate_checks(
-        observations, catalog, mm23, latest_only=True
-    )
-    weight_residuals = [abs(float(check['residual'])) for check in weight_checks]
-    rate_residuals = [abs(float(check['residual_pp'])) for check in rate_checks]
+    rate_checks = published_12m_rate_checks(observations, catalog, mm23, latest_only=True)
+    weight_residuals = [abs(float(check["residual"])) for check in weight_checks]
+    rate_residuals = [abs(float(check["residual_pp"])) for check in rate_checks]
     print(
         "COMPLEMENT_METRICS "
         f"checks={len(weight_checks)} "
@@ -50,5 +48,5 @@ def test_live_ons_ex_cpi_scope_and_reconciliation() -> None:
     )
     assert len(weight_checks) == len(EX_CPI_SPECIAL_AGGREGATES)
     assert len(rate_checks) == len(EX_CPI_SPECIAL_AGGREGATES)
-    assert all(check['passed'] for check in weight_checks)
-    assert all(check['passed'] for check in rate_checks)
+    assert all(check["passed"] for check in weight_checks)
+    assert all(check["passed"] for check in rate_checks)

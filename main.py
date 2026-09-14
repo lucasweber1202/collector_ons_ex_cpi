@@ -120,7 +120,10 @@ def _validate(checks: list[dict[str, object]], label: str) -> None:
         raise ValueError(f"{label}: no checks executed")
     failures = [check for check in checks if not bool(check["passed"])]
     residual_key = "residual_pp" if "residual_pp" in checks[0] else "residual"
-    residuals = sorted(abs(float(check[residual_key])) for check in checks)
+    raw_residuals = [check[residual_key] for check in checks]
+    if not all(isinstance(value, (int, float)) for value in raw_residuals):
+        raise TypeError(f"{label}: non-numeric residual")
+    residuals = sorted(abs(value) for value in raw_residuals if isinstance(value, (int, float)))
     median = residuals[len(residuals) // 2]
     logger.info(
         "%s checks=%d failures=%d max_residual=%.6f median_residual=%.6f",
@@ -164,9 +167,10 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
         start = _rewind_start(latest)
         observations = collect_raw_data(_shift_months(start, -12))
     else:
-        observations = _wait_for_release(latest)
-        if observations is None:
+        waited_observations = _wait_for_release(latest)
+        if waited_observations is None:
             return 0
+        observations = waited_observations
         start = min(observations)
 
     # observations deliberately retains the preceding 12 months so the

@@ -169,8 +169,12 @@ def test_pre_2017_weight_applies_to_all_twelve_months_without_archive() -> None:
 def test_weight_regimes_map_onto_existing_index_series_ids() -> None:
     regimes = {
         date(2026, 1, 1): {
-            aggregate["weight_cdid"]: 700.0 + index
+            cdid: value
             for index, aggregate in enumerate(EX_CPI_SPECIAL_AGGREGATES)
+            for cdid, value in (
+                (aggregate["weight_cdid"], 700.0 + index),
+                (aggregate["complement_weight_cdid"], 300.0 - index),
+            )
         }
     }
 

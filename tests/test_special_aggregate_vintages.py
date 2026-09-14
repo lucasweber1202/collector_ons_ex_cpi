@@ -39,9 +39,10 @@ def _page(*rows: str) -> str:
 def _weight_panel(values_by_year: dict[int, float]) -> MM23SpecialPanel:
     annual: dict[int, dict[str, float]] = {}
     for year, value in values_by_year.items():
-        annual[year] = {
-            aggregate["weight_cdid"]: value for aggregate in EX_CPI_SPECIAL_AGGREGATES
-        }
+        annual[year] = {}
+        for aggregate in EX_CPI_SPECIAL_AGGREGATES:
+            annual[year][aggregate["weight_cdid"]] = value
+            annual[year][aggregate["complement_weight_cdid"]] = 1000.0 - value
     return MM23SpecialPanel(annual_weights=annual, monthly_indices={}, monthly_rates_12m={})
 
 

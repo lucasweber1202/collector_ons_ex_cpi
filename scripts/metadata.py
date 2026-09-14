@@ -57,9 +57,7 @@ def legacy_identifier_sql(table: str) -> TextClause:
 
     Legacy UK-CPI identifiers begin with CPI_; this collector uses EXCPI_.
     """
-    return text(
-        f"SELECT COUNT(*) FROM {table} WHERE series_id LIKE 'CPI_%'"
-    )
+    return text(f"SELECT COUNT(*) FROM {table} WHERE series_id LIKE 'CPI_%'")
 
 
 _SELECT_SQL = text(f"SELECT {', '.join(_COLUMNS)} FROM {_TABLE}")

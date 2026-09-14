@@ -355,8 +355,7 @@ def complement_weight_checks(
         available = [
             year
             for year, values in panel.annual_weights.items()
-            if aggregate["weight_cdid"] in values
-            and aggregate["complement_weight_cdid"] in values
+            if aggregate["weight_cdid"] in values and aggregate["complement_weight_cdid"] in values
         ]
         years = [max(available)] if available and latest_only else sorted(available)
         for year in years:

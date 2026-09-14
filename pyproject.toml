@@ -49,3 +49,8 @@ warn_unused_ignores = false
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Ruff 0.16 began linting and formatting Python fenced inside Markdown, which
+# rewrote the fleet-wide VERBATIM skill files under .github/ to satisfy a
+# formatter. Those files are copied from the governance repository and must
+# stay byte-identical, so ruff owns this repository's Python only.
+extend-exclude = ["*.md"]

@@ -13,11 +13,21 @@ from datetime import UTC, date, datetime
 from sqlalchemy.engine import Engine
 
 from scripts.config import (
-    DEFAULT_START_DATE, LOG_LEVEL, MAX_WAIT, POLL_INTERVAL,
-    START_DATE_LOOKBACK_MONTHS, missing_environment, unresolved_credentials,
+    DEFAULT_START_DATE,
+    LOG_LEVEL,
+    MAX_WAIT,
+    POLL_INTERVAL,
+    START_DATE_LOOKBACK_MONTHS,
+    missing_environment,
+    unresolved_credentials,
 )
 from scripts.db import build_engine
-from scripts.extract import collect_raw_data, get_last_publish_date, get_series_catalog, get_workbook_fingerprint
+from scripts.extract import (
+    collect_raw_data,
+    get_last_publish_date,
+    get_series_catalog,
+    get_workbook_fingerprint,
+)
 from scripts.init_db import init_db
 from scripts.metadata import assert_current_series_ids, upsert_metadata
 from scripts.original_weights import upsert_original_weights
@@ -110,11 +120,18 @@ def _validate(checks: list[dict[str, object]], label: str) -> None:
         raise ValueError(f"{label}: no checks executed")
     failures = [check for check in checks if not bool(check["passed"])]
     residual_key = "residual_pp" if "residual_pp" in checks[0] else "residual"
-    residuals = sorted(abs(float(check[residual_key])) for check in checks)
+    raw_residuals = [check[residual_key] for check in checks]
+    if not all(isinstance(value, (int, float)) for value in raw_residuals):
+        raise TypeError(f"{label}: non-numeric residual")
+    residuals = sorted(abs(value) for value in raw_residuals if isinstance(value, (int, float)))
     median = residuals[len(residuals) // 2]
     logger.info(
         "%s checks=%d failures=%d max_residual=%.6f median_residual=%.6f",
-        label, len(checks), len(failures), max(residuals), median,
+        label,
+        len(checks),
+        len(failures),
+        max(residuals),
+        median,
     )
     if failures:
         raise ValueError(f"{label}: {len(failures)} checks outside tolerance")
@@ -150,9 +167,10 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
         start = _rewind_start(latest)
         observations = collect_raw_data(_shift_months(start, -12))
     else:
-        observations = _wait_for_release(latest)
-        if observations is None:
+        waited_observations = _wait_for_release(latest)
+        if waited_observations is None:
             return 0
+        observations = waited_observations
         start = min(observations)
 
     # observations deliberately retains the preceding 12 months so the
@@ -174,12 +192,20 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
         "MM23 published 12-month rates",
     )
 
-    release_date = get_last_publish_date() or date.today()
+    release_date = get_last_publish_date() or datetime.now(UTC).date()
     snapshot_map = january_regime_snapshots(discover_mm23_snapshots())
     first_year = max(DOUBLE_WEIGHT_START_YEAR, start.year)
-    january_panels = collect_january_weight_panels(
-        snapshot_map, start_year=first_year, end_year=release_date.year - 1
-    ) if release_date.year - 1 >= first_year else {}
+    # The current year needs its own archived January panel as soon as the March
+    # release has landed: from that point the live MM23 annual value is the
+    # February-December regime, so January must come from the snapshot that
+    # release superseded. Only a release still in January or February leaves the
+    # current year without an archive, because then the live value *is* January.
+    last_year = release_date.year if release_date.month >= 3 else release_date.year - 1
+    january_panels = (
+        collect_january_weight_panels(snapshot_map, start_year=first_year, end_year=last_year)
+        if last_year >= first_year
+        else {}
+    )
     regimes = build_exclusion_weight_regimes(
         panel, release_date, january_panels, start_year=start.year
     )
@@ -196,8 +222,12 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     logger.info(
         "Run result: observations=%d vintages=%d official_weights=%d "
         "weight_vintages=%d metadata_inserted=%d metadata_updated=%d",
-        new_obs, new_vintages, new_weights, weight_vintages,
-        metadata_inserted, metadata_updated,
+        new_obs,
+        new_vintages,
+        new_weights,
+        weight_vintages,
+        metadata_inserted,
+        metadata_updated,
     )
     return 0
 
@@ -233,8 +263,12 @@ def run(argv: list[str] | None = None) -> int:
             log_engine = build_engine()
             init_db(log_engine)
             insert_run_log(
-                log_engine, started_at, finished_at, status,
-                log_buffer.getvalue(), traceback_text,
+                log_engine,
+                started_at,
+                finished_at,
+                status,
+                log_buffer.getvalue(),
+                traceback_text,
             )
         except Exception:
             logger.exception("Could not persist run log")

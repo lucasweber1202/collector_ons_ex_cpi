@@ -39,9 +39,11 @@ def test_every_wait_stays_bounded() -> None:
 
 
 def test_non_ons_urls_are_refused() -> None:
-    with _client(lambda _request: _response(200)) as client:
-        with pytest.raises(ValueError, match="Refusing non-ONS URL"):
-            extract.http_get(client, "https://example.com/file.xlsx")
+    with (
+        _client(lambda _request: _response(200)) as client,
+        pytest.raises(ValueError, match="Refusing non-ONS URL"),
+    ):
+        extract.http_get(client, "https://example.com/file.xlsx")
 
 
 def test_retries_stop_and_raise(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,9 +54,11 @@ def test_retries_stop_and_raise(monkeypatch: pytest.MonkeyPatch) -> None:
         attempts.append(1)
         return httpx.Response(429, request=request)
 
-    with _client(handler) as client:
-        with pytest.raises(httpx.HTTPStatusError, match="retryable status 429"):
-            extract.http_get(client, URL)
+    with (
+        _client(handler) as client,
+        pytest.raises(httpx.HTTPStatusError, match="retryable status 429"),
+    ):
+        extract.http_get(client, URL)
     assert len(attempts) == extract.MAX_RETRIES + 1
 
 
@@ -78,9 +82,8 @@ def test_client_errors_are_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:
         attempts.append(1)
         return httpx.Response(404, request=request)
 
-    with _client(handler) as client:
-        with pytest.raises(httpx.HTTPStatusError):
-            extract.http_get(client, URL)
+    with _client(handler) as client, pytest.raises(httpx.HTTPStatusError):
+        extract.http_get(client, URL)
     assert len(attempts) == 1
 
 
@@ -101,9 +104,8 @@ def test_an_oversized_declared_length_is_refused(monkeypatch: pytest.MonkeyPatch
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, request=request, content=b"x" * 4096)
 
-    with _client(handler) as client:
-        with pytest.raises(ValueError, match="above the download limit"):
-            extract.http_get(client, URL)
+    with _client(handler) as client, pytest.raises(ValueError, match="exceeds download limit"):
+        extract.http_get(client, URL)
 
 
 def test_an_oversized_stream_is_refused_before_it_is_fully_buffered(
@@ -125,7 +127,9 @@ def test_an_oversized_stream_is_refused_before_it_is_fully_buffered(
 
         return httpx.Response(200, request=request, stream=_Stream())
 
-    with _client(streaming_handler) as client:
-        with pytest.raises(ValueError, match="exceeded the 1024 byte limit"):
-            extract.http_get(client, URL)
+    with (
+        _client(streaming_handler) as client,
+        pytest.raises(ValueError, match="exceeded 1024 bytes"),
+    ):
+        extract.http_get(client, URL)
     assert len(produced) < 10

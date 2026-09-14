@@ -15,8 +15,13 @@ import httpx
 import pandas as pd
 
 from scripts.config import (
-    BACKOFF_FACTOR, MAX_DOWNLOAD_BYTES, MAX_RETRIES, MAX_RETRY_DELAY,
-    RATE_LIMIT_BACKOFF, REQUEST_TIMEOUT, USER_AGENT,
+    BACKOFF_FACTOR,
+    MAX_DOWNLOAD_BYTES,
+    MAX_RETRIES,
+    MAX_RETRY_DELAY,
+    RATE_LIMIT_BACKOFF,
+    REQUEST_TIMEOUT,
+    USER_AGENT,
 )
 from scripts.special_aggregates import EX_CPI_SPECIAL_AGGREGATES
 

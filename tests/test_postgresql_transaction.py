@@ -20,8 +20,7 @@ def test_postgresql_rolls_back_observations_and_weights() -> None:
         conn.execute(text("DROP SCHEMA IF EXISTS collector_ons_ex_cpi CASCADE"))
     init_db(engine)
     collected_at = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
-    observations = {date(2026, 8, 1): {"EXCPI_INDEX_NATIVE_DKC6": 102.5}}
-    weights = [
+    observations: dict[date, dict[str, float | None]] = {\n        date(2026, 8, 1): {"EXCPI_INDEX_NATIVE_DKC6": 102.5}\n    }\n    weights = [
         {
             "series_id": "EXCPI_WEIGHT_NATIVE_A9FU",
             "reference_date": date(2026, 8, 1),

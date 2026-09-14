@@ -195,11 +195,15 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     release_date = get_last_publish_date() or datetime.now(UTC).date()
     snapshot_map = january_regime_snapshots(discover_mm23_snapshots())
     first_year = max(DOUBLE_WEIGHT_START_YEAR, start.year)
+    # The current year needs its own archived January panel as soon as the March
+    # release has landed: from that point the live MM23 annual value is the
+    # February-December regime, so January must come from the snapshot that
+    # release superseded. Only a release still in January or February leaves the
+    # current year without an archive, because then the live value *is* January.
+    last_year = release_date.year if release_date.month >= 3 else release_date.year - 1
     january_panels = (
-        collect_january_weight_panels(
-            snapshot_map, start_year=first_year, end_year=release_date.year - 1
-        )
-        if release_date.year - 1 >= first_year
+        collect_january_weight_panels(snapshot_map, start_year=first_year, end_year=last_year)
+        if last_year >= first_year
         else {}
     )
     regimes = build_exclusion_weight_regimes(

@@ -9,25 +9,15 @@ import pytest
 
 from scripts.special_aggregate_vintages import (
     DOUBLE_WEIGHT_START_YEAR,
-    MM23Snapshot,
     collect_mm23_snapshot,
     discover_mm23_snapshots,
+    scheduled_march_snapshots,
 )
 from scripts.special_aggregates import (
     EX_CPI_SPECIAL_AGGREGATES,
     MM23_WEIGHT_SUM_TOLERANCE,
     collect_mm23_special_aggregates,
 )
-
-
-def _scheduled_march_candidates(snapshots: list[MM23Snapshot], year: int) -> list[MM23Snapshot]:
-    return [
-        snapshot
-        for snapshot in snapshots
-        if snapshot.superseded_at.year == year
-        and snapshot.superseded_at.month == 3
-        and snapshot.reason == "scheduled"
-    ]
 
 
 def _weight_panel_error(values: dict[str, float] | None, year: int) -> str | None:
@@ -61,25 +51,26 @@ def test_historical_mm23_snapshot_matrix() -> None:
     )
     print("|---|---|---|---|---|---|")
     for year in range(DOUBLE_WEIGHT_START_YEAR, end_year + 1):
-        candidates = _scheduled_march_candidates(snapshots, year)
+        candidates = scheduled_march_snapshots(snapshots, year)
         feb_dec_error = _weight_panel_error(current.annual_weights.get(year), year)
         if not candidates:
             status = "SOURCE GAP"
             snapshot_label = "missing"
             superseded = "-"
             reason = "no scheduled March snapshot"
-        elif len(candidates) > 1:
-            status = "FAIL"
-            snapshot_label = ", ".join(snapshot.version_id for snapshot in candidates)
-            superseded = ", ".join(
-                snapshot.superseded_at.date().isoformat() for snapshot in candidates
-            )
-            reason = "ambiguous scheduled March selector"
         else:
-            snapshot = candidates[0]
+            # The January regime is the version the weight-changing March release
+            # superseded, so the last scheduled March snapshot is the selector.
+            # 2017 is the only year so far with two: see january_regime_snapshots.
+            snapshot = candidates[-1]
             snapshot_label = snapshot.version_id
             superseded = snapshot.superseded_at.date().isoformat()
             reason = snapshot.reason
+            if len(candidates) > 1:
+                reason = (
+                    f"{snapshot.reason}; last of {len(candidates)} March releases "
+                    f"({', '.join(other.version_id for other in candidates)})"
+                )
             try:
                 january = collect_mm23_snapshot(snapshot)
                 january_error = _weight_panel_error(january.annual_weights.get(year), year)

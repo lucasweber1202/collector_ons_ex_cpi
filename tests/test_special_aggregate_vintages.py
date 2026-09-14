@@ -13,6 +13,7 @@ from scripts.special_aggregate_vintages import (
     map_exclusion_weight_regimes_to_table38,
     mm23_original_weight_id,
     parse_mm23_snapshot_index,
+    scheduled_march_snapshots,
 )
 from scripts.special_aggregates import EX_CPI_SPECIAL_AGGREGATES, MM23SpecialPanel
 
@@ -88,14 +89,49 @@ def test_january_regime_ignores_pre_double_update_years() -> None:
     assert set(selected) == {2017}
 
 
-def test_january_regime_rejects_two_scheduled_march_snapshots_for_one_year() -> None:
+def test_january_regime_takes_the_last_of_two_scheduled_march_releases() -> None:
+    """March 2017 is the source's real counter-example to a uniqueness rule.
+
+    ONS published MM23 on both 14 and 21 March 2017. The archived CSVs show the
+    snapshots superseded on those dates carry identical 2017 weights, while the
+    version published on 21 March already carries the February-December regime.
+    The weight-changing release is therefore the 21 March one, and the version
+    it superseded -- the last March snapshot -- is the January regime.
+    """
     page = _page(
-        _row("v130", "Scheduled update/revision", "25 March 2026 07:00"),
-        _row("v131", "Scheduled update/revision", "25 March 2026 12:51"),
+        _row("v18", "Scheduled update/revision", "14 March 2017 09:30"),
+        _row("v19", "Scheduled update/revision", "21 March 2017 09:30"),
     )
 
-    with pytest.raises(ValueError, match="Two scheduled March MM23 snapshots found for 2026"):
-        january_regime_snapshots(parse_mm23_snapshot_index(page))
+    selected = january_regime_snapshots(parse_mm23_snapshot_index(page))
+
+    assert selected[2017].version_id == "v19"
+    assert selected[2017].superseded_at == datetime(2017, 3, 21, 9, 30, tzinfo=UTC)
+
+
+def test_january_regime_still_prefers_a_scheduled_release_over_a_later_correction() -> None:
+    """Last-in-March must not become "latest row wins" and pick a correction."""
+    page = _page(
+        _row("v130", "Scheduled update/revision", "25 March 2026 07:00"),
+        _row("v131", "Correction See correction", "25 March 2026 12:51"),
+    )
+
+    selected = january_regime_snapshots(parse_mm23_snapshot_index(page))
+
+    assert selected[2026].version_id == "v130"
+    assert selected[2026].reason == "scheduled"
+
+
+def test_scheduled_march_snapshots_are_returned_oldest_first() -> None:
+    page = _page(
+        _row("v19", "Scheduled update/revision", "21 March 2017 09:30"),
+        _row("v18", "Scheduled update/revision", "14 March 2017 09:30"),
+        _row("v20", "Scheduled update/revision", "11 April 2017 09:30"),
+    )
+
+    candidates = scheduled_march_snapshots(parse_mm23_snapshot_index(page), 2017)
+
+    assert [snapshot.version_id for snapshot in candidates] == ["v18", "v19"]
 
 
 def test_snapshot_index_fails_loudly_when_layout_has_no_versioned_csv() -> None:

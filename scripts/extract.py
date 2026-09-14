@@ -28,7 +28,9 @@ from scripts.special_aggregates import EX_CPI_SPECIAL_AGGREGATES
 logger = logging.getLogger(__name__)
 SOURCE_NAME = "Office for National Statistics"
 RELEASE_NAME = "Consumer price inflation: special aggregates"
-COUNTRY_CURRENCY = "GBR"
+# The fleet vocabulary for metadata.country is the ISO 4217 currency code, not
+# an ISO 3166 country code (MASTER_MACRO_COLLECTOR_GUIDELINES.md section 5.1).
+COUNTRY_CURRENCY = "GBP"
 SOURCE_URL = (
     "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation"
 )

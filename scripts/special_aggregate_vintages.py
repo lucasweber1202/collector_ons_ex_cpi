@@ -9,6 +9,7 @@ superseded by the scheduled March release. Nothing in this module persists data.
 from __future__ import annotations
 
 import html
+import logging
 import re
 import time
 from collections.abc import Mapping
@@ -31,6 +32,8 @@ MM23_VERSIONS_URL = (
 )
 DOUBLE_WEIGHT_START_YEAR = 2017
 MM23_WEIGHT_DATASET = "ONS Consumer price inflation time series (MM23) special aggregate weights"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -134,33 +137,103 @@ def parse_mm23_snapshot_index(page_html: str) -> list[MM23Snapshot]:
     return sorted(snapshots, key=lambda snapshot: snapshot.superseded_at)
 
 
+def scheduled_march_snapshots(
+    snapshots: list[MM23Snapshot],
+    year: int,
+) -> list[MM23Snapshot]:
+    """Return every scheduled March snapshot for one year, oldest first."""
+    return sorted(
+        (
+            snapshot
+            for snapshot in snapshots
+            if snapshot.superseded_at.year == year
+            and snapshot.superseded_at.month == 3
+            and snapshot.reason == "scheduled"
+        ),
+        key=lambda snapshot: snapshot.superseded_at,
+    )
+
+
 def january_regime_snapshots(
     snapshots: list[MM23Snapshot],
     start_year: int = DOUBLE_WEIGHT_START_YEAR,
 ) -> dict[int, MM23Snapshot]:
     """Select the final January-weight snapshot for each double-update year.
 
-    The target is the version superseded by the *scheduled* March release. A
-    same-day correction is deliberately not a selector because it belongs to
-    the newly released February-December regime rather than the preceding
-    January regime.
+    The January regime is whatever MM23 published immediately *before* the
+    March release that introduces the new annual weights, so the target is the
+    **last** scheduled March snapshot of the year: the version that release
+    superseded. A same-day correction is deliberately not a selector because it
+    belongs to the newly released February-December regime.
+
+    Most years publish MM23 once in March, so "last" and "only" coincide. March
+    2017 is the source's counter-example and the reason this is not written as a
+    uniqueness assertion: ONS published MM23 on both 14 and 21 March 2017.
+    Verified against the archived CSVs, the snapshots superseded on those two
+    dates carry identical 2017 weights (for example ``A9F5`` = 978.0), while the
+    version published on 21 March already carries the February-December regime
+    (``A9F5`` = 977.0). The 21 March release is therefore the one that changed
+    the weights, and the version it superseded -- the last March snapshot -- is
+    the January regime. Treating two March releases as ambiguous rejected a year
+    the source describes unambiguously.
     """
     selected: dict[int, MM23Snapshot] = {}
-    for snapshot in snapshots:
-        year = snapshot.superseded_at.year
-        if year < start_year or snapshot.superseded_at.month != 3:
-            continue
-        if snapshot.reason != "scheduled":
-            continue
-        if year in selected:
-            previous = selected[year]
-            raise ValueError(
-                "Two scheduled March MM23 snapshots found for "
-                f"{year}: {previous.version_id} at {previous.superseded_at.isoformat()} and "
-                f"{snapshot.version_id} at {snapshot.superseded_at.isoformat()}"
-            )
-        selected[year] = snapshot
+    years = {
+        snapshot.superseded_at.year
+        for snapshot in snapshots
+        if snapshot.superseded_at.year >= start_year and snapshot.superseded_at.month == 3
+    }
+    for year in sorted(years):
+        candidates = scheduled_march_snapshots(snapshots, year)
+        if candidates:
+            selected[year] = candidates[-1]
     return selected
+
+
+def _reviewed_weight_cdids() -> list[str]:
+    """Return the twenty reviewed exclusion and complement weight CDIDs."""
+    return [
+        cdid
+        for aggregate in EX_CPI_SPECIAL_AGGREGATES
+        for cdid in (aggregate["weight_cdid"], aggregate["complement_weight_cdid"])
+    ]
+
+
+def first_published_weight_year(panel: MM23SpecialPanel) -> int:
+    """Return the first MM23 year that publishes the complete reviewed weight set.
+
+    MM23 carries annual weight rows from 1988, but the special-aggregate weight
+    series themselves start later: on the current release the ``A9xx`` weights
+    begin in 1996, and 1988-1995 expose only the three older complement series
+    (``CHZS``, ``CHZU``, ``CJWP``). Those earlier years are a source gap, not a
+    parser fault, so they must produce no weight rows rather than fail the run.
+
+    The boundary is derived from the panel instead of hardcoded, so an ONS
+    backfill moves it automatically. Once the complete set appears it must not
+    disappear again: a hole after the boundary is real drift and raises.
+    """
+    reviewed = _reviewed_weight_cdids()
+    complete = [
+        year
+        for year, values in panel.annual_weights.items()
+        if all(cdid in values for cdid in reviewed)
+    ]
+    if not complete:
+        raise ValueError(
+            "MM23 publishes no year carrying all twenty reviewed special-aggregate weights"
+        )
+    boundary = min(complete)
+    incomplete_after = sorted(
+        year
+        for year in panel.annual_weights
+        if year > boundary and not all(cdid in panel.annual_weights[year] for cdid in reviewed)
+    )
+    if incomplete_after:
+        raise ValueError(
+            "MM23 stops publishing the complete reviewed weight set after "
+            f"{boundary} for years {incomplete_after}"
+        )
+    return boundary
 
 
 def _official_weights(panel: MM23SpecialPanel, year: int) -> dict[str, float]:
@@ -195,11 +268,26 @@ def build_exclusion_weight_regimes(
 
     For a historical double-update year, a missing January snapshot is an error
     rather than a reason to reuse the later February-December value.
+
+    Years before the first fully published weight year carry no reviewed weights
+    at source and are skipped: the index levels for those months are still
+    collected, they simply have no official weight regime to store.
     """
     expanded: dict[date, dict[str, float]] = {}
-    years = sorted(current.annual_weights)
+    published_from = first_published_weight_year(current)
+    years = sorted(year for year in current.annual_weights if year >= published_from)
     if start_year is not None:
         years = [year for year in years if year >= start_year]
+    skipped = sorted(year for year in current.annual_weights if year < published_from)
+    if skipped:
+        logger.info(
+            "MM23 publishes no special-aggregate weights before %d; %d earlier year(s) "
+            "(%d-%d) have index levels but no weight regime",
+            published_from,
+            len(skipped),
+            skipped[0],
+            skipped[-1],
+        )
     for year in years:
         if year > current_release_date.year:
             continue

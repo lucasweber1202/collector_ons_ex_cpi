@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -24,7 +24,7 @@ from scripts.special_aggregates import (
 def test_historical_mm23_snapshot_matrix() -> None:
     current = collect_mm23_special_aggregates()
     selected = january_regime_snapshots(discover_mm23_snapshots())
-    end_year = date.today().year
+    end_year = datetime.now(UTC).year
     expected = set(range(DOUBLE_WEIGHT_START_YEAR, end_year + 1))
     assert set(selected) >= expected, f'Missing scheduled-March snapshots: {sorted(expected - set(selected))}'
     print("| Year | January snapshot/version | Superseded date | Reason | Feb-Dec regime | Status |")

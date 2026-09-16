@@ -202,7 +202,8 @@ def _cell_month(value: object) -> date | None:
 
 def _publication_date(blob: bytes) -> date | None:
     contents = _excel_frame(blob, "Contents")
-    for value in contents.iloc[:, 0].dropna().astype(str):
+    for raw_value in contents.iloc[:, 0].dropna().tolist():
+        value = str(raw_value)
         match = re.search(r"Publication date:\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})", value)
         if match:
             parsed = time.strptime(match.group(1), "%d %B %Y")

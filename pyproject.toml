@@ -55,3 +55,7 @@ target-version = "py311"
 # formatter. Those files are copied from the governance repository and must
 # stay byte-identical, so ruff owns this repository's Python only.
 extend-exclude = ["*.md"]
+
+[tool.ruff.lint.per-file-ignores]
+# This file is byte-identical to collector_template/GUIDELINES.md §8.9.
+"scripts/databricks_engine.py" = ["S110", "BLE001"]

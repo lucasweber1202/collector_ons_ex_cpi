@@ -7,20 +7,20 @@ name = "collector-ons-ex-cpi"
 version = "0.1.0"
 description = "UK ONS CPI exclusion measures collector with MM23 weights and validation"
 requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "Proprietary" }
+authors = [{ name = "Macrobond Inhouse" }]
 dependencies = [
-  "azure-identity>=1.17",
-  "azure-keyvault-secrets>=4.8",
-  "databricks-sqlalchemy>=2.0",
-  "httpx[socks]>=0.27",
-  "openpyxl>=3.1",
-  "pandas>=2.0",
+  "azure-identity>=1.12",
+  "azure-keyvault-secrets>=4.4",
+  "databricks-sqlalchemy>=0.2.8",
   "psycopg2-binary>=2.9",
-  # Databricks resolves its token from pyspark.dbutils.DBUtils inside a
-  # notebook or job context; the fleet pins the runtime-matched version.
   "pyspark==4.1.1",
+  "httpx>=0.27",
   "sqlalchemy>=2.0",
+  "pandas>=2.0",
+  "openpyxl>=3.1",
 ]
-
 [project.optional-dependencies]
 dev = ["mypy>=1.11", "pandas-stubs>=2.0", "pytest>=8.0", "ruff>=0.6"]
 

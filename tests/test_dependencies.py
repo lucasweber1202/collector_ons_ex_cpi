@@ -14,7 +14,13 @@ BANNED = ("requests", "python-dotenv", "sqlalchemy-utils", "alembic", "pydantic"
 
 def _requirements() -> list[str]:
     text = (Path(ROOT_DIR) / "requirements.txt").read_text(encoding="utf-8")
-    return sorted(line.strip() for line in text.splitlines() if line.strip())
+    # The canonical requirements.txt (GUIDELINES.md §8.5) is a commented,
+    # sectioned file; only the requirement lines mirror pyproject.
+    return sorted(
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    )
 
 
 def _pyproject() -> list[str]:

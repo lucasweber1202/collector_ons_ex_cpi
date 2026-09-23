@@ -87,6 +87,29 @@ def _patch_pipeline(
             }
         ],
     )
+    # The operational share layer is stubbed the same way its official
+    # counterpart is: this test is about the transaction boundary, not about
+    # the arithmetic, which tests/test_reconciliation.py covers against the
+    # real MM23 crosswalk. The share stays a genuine [0, 1] value so the
+    # range guard in scripts/weights.py is still exercised on the way through.
+    monkeypatch.setattr(
+        main,
+        "build_operational_shares",
+        lambda _regimes: [
+            {
+                "series_id": "EXCPI_SHARE_NATIVE_A9FU",
+                "reference_date": requested,
+                "weight": 0.7,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        main,
+        "reconstruction_checks",
+        lambda _panel, _regimes: _record(
+            calls, "reconstruction", [{"passed": True, "residual": 0.0}]
+        ),
+    )
     return calls
 
 

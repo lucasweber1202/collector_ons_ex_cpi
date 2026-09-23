@@ -10,10 +10,12 @@ import pytest
 
 from scripts.special_aggregates import (
     EX_CPI_SPECIAL_AGGREGATES,
+    HEADLINE_INDEX_CDID,
     MM23_WEIGHT_TOTAL,
     complement_weight_checks,
     parse_mm23_special_aggregates,
     required_mm23_cdids,
+    required_mm23_columns,
     resolve_table38_alt_series,
     validate_crosswalk,
 )
@@ -21,7 +23,9 @@ from scripts.special_aggregates import (
 
 def _mm23_blob(*, omit: str | None = None, broken_total: bool = False) -> bytes:
     """Build a tiny wide MM23 file with the same title/header/period contract."""
-    cdids = [cdid for cdid in sorted(required_mm23_cdids()) if cdid != omit]
+    # required_mm23_columns(), not the crosswalk: a real MM23 also carries the
+    # headline all-items index, which every reconstruction check scores against.
+    cdids = [cdid for cdid in sorted(required_mm23_columns()) if cdid != omit]
     weight_cdids = {row["weight_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES} | {
         row["complement_weight_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES
     }
@@ -41,7 +45,7 @@ def _mm23_blob(*, omit: str | None = None, broken_total: bool = False) -> bytes:
             annual[aggregate["complement_weight_cdid"]] = 200.0
     if broken_total and "A9FU" in annual:
         annual["A9FU"] = 799.0
-    for cdid in index_cdids:
+    for cdid in index_cdids | {HEADLINE_INDEX_CDID}:
         if cdid in monthly:
             monthly[cdid] = 123.4
     for cdid in rate_cdids:

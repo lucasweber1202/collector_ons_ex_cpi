@@ -35,6 +35,7 @@ def engine(tmp_path: Path) -> Iterator[Engine]:
             init_db.CREATE_METADATA_TABLE,
             init_db.CREATE_TIME_SERIES_TABLE.format(double="DOUBLE"),
             init_db.CREATE_ORIGINAL_WEIGHTS_TABLE.format(double="DOUBLE"),
+            init_db.CREATE_WEIGHTS_TABLE.format(double="DOUBLE"),
             logs,
         ):
             conn.execute(text(statement))

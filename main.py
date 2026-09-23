@@ -9,6 +9,7 @@ import sys
 import time
 import traceback
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 from sqlalchemy.engine import Engine
 
@@ -22,6 +23,7 @@ from scripts.config import (
     unresolved_credentials,
 )
 from scripts.db import build_engine
+from scripts.export_validation_xlsx import export_validation_xlsx
 from scripts.extract import (
     collect_raw_data,
     get_last_publish_date,
@@ -31,6 +33,7 @@ from scripts.extract import (
 from scripts.init_db import init_db
 from scripts.metadata import assert_current_series_ids, upsert_metadata
 from scripts.original_weights import upsert_original_weights
+from scripts.reconciliation import build_operational_shares, reconstruction_checks
 from scripts.run_logs import insert_run_log
 from scripts.special_aggregate_rates import published_12m_rate_checks
 from scripts.special_aggregate_vintages import (
@@ -43,6 +46,7 @@ from scripts.special_aggregate_vintages import (
 )
 from scripts.special_aggregates import collect_mm23_special_aggregates, complement_weight_checks
 from scripts.time_series import get_max_reference_date, upsert_time_series
+from scripts.weights import upsert_weights
 
 logger = logging.getLogger("main")
 
@@ -74,6 +78,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--log-level", default=LOG_LEVEL)
     parser.add_argument("--start-date", type=date.fromisoformat)
     parser.add_argument("--no-watch", action="store_true")
+    parser.add_argument(
+        "--export-validation",
+        type=Path,
+        default=None,
+        help=(
+            "Write the analyst audit workbook to this path after the run, read "
+            "back from the rows just persisted."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -210,25 +223,44 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
         panel, release_date, january_panels, start_year=start.year
     )
     rows = _weight_rows(regimes, get_series_catalog())
+    share_rows = build_operational_shares(regimes)
+    # The operational shares are only worth storing if they actually rebuild
+    # the published index, so they are reconciled before they are written.
+    reconciliation_rows = reconstruction_checks(panel, regimes)
+    _validate(reconciliation_rows, "EX-CPI reconstruction")
 
     collected_at = datetime.now(UTC)
     with engine.begin() as conn:
         assert_current_series_ids(conn)
         new_obs, new_vintages = upsert_time_series(conn, stored_observations, collected_at)
         new_weights, weight_vintages = upsert_original_weights(conn, rows, collected_at)
+        new_shares, share_vintages = upsert_weights(conn, share_rows, collected_at)
         metadata_inserted, metadata_updated = upsert_metadata(
             conn, stored_observations, collected_at, get_series_catalog()
         )
     logger.info(
         "Run result: observations=%d vintages=%d official_weights=%d "
-        "weight_vintages=%d metadata_inserted=%d metadata_updated=%d",
+        "weight_vintages=%d operational_shares=%d share_vintages=%d "
+        "metadata_inserted=%d metadata_updated=%d",
         new_obs,
         new_vintages,
         new_weights,
         weight_vintages,
+        new_shares,
+        share_vintages,
         metadata_inserted,
         metadata_updated,
     )
+    if args.export_validation is not None:
+        # Written after the commit, and read back from the database, so the
+        # workbook can only show rows that actually persisted.
+        export_validation_xlsx(
+            engine,
+            get_series_catalog(),
+            reconciliation_rows,
+            args.export_validation,
+            as_of=collected_at.date(),
+        )
     return 0
 
 

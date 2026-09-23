@@ -88,8 +88,8 @@ def test_shares_are_normalised_within_each_pair() -> None:
     assert len(rows) == 2 * len(EX_CPI_SPECIAL_AGGREGATES)
     by_id = {row["series_id"]: row["weight"] for row in rows}
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:
-        exclusion = by_id[operational_share_id(aggregate["weight_cdid"])]
-        complement = by_id[operational_share_id(aggregate["complement_weight_cdid"])]
+        exclusion = by_id[f"EXCPI_INDEX_NATIVE_{aggregate['index_cdid']}"]
+        complement = by_id[f"EXCPI_INDEX_NATIVE_{aggregate['complement_index_cdid']}"]
         assert exclusion == pytest.approx(0.8)
         assert complement == pytest.approx(0.2)
         assert exclusion + complement == pytest.approx(1.0)
@@ -104,8 +104,8 @@ def test_shares_normalise_against_their_own_pair_not_a_hardcoded_thousand() -> N
     rows = build_operational_shares({JANUARY: _regime(exclusion=700.0, complement=200.0)})
     by_id = {row["series_id"]: row["weight"] for row in rows}
     aggregate = EX_CPI_SPECIAL_AGGREGATES[0]
-    exclusion = by_id[operational_share_id(aggregate["weight_cdid"])]
-    complement = by_id[operational_share_id(aggregate["complement_weight_cdid"])]
+    exclusion = by_id[f"EXCPI_INDEX_NATIVE_{aggregate['index_cdid']}"]
+    complement = by_id[f"EXCPI_INDEX_NATIVE_{aggregate['complement_index_cdid']}"]
     assert exclusion == pytest.approx(700 / 900)
     assert exclusion + complement == pytest.approx(1.0)
 

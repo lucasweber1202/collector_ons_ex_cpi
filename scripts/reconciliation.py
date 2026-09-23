@@ -115,13 +115,13 @@ def build_operational_shares(
                 raise ValueError(
                     f"Non-positive MM23 weight pair for {aggregate['label']!r} at {month}"
                 )
-            for cdid, weight in (
-                (aggregate["weight_cdid"], exclusion),
-                (aggregate["complement_weight_cdid"], complement),
+            for component_cdid, weight in (
+                (aggregate["index_cdid"], exclusion),
+                (aggregate["complement_index_cdid"], complement),
             ):
                 rows.append(
                     {
-                        "series_id": operational_share_id(cdid),
+                        "series_id": f"EXCPI_INDEX_NATIVE_{component_cdid}",
                         "reference_date": month,
                         "weight": weight / total,
                     }

@@ -127,6 +127,9 @@ def init_db(engine: Engine) -> None:
             CREATE_LOGS_TABLE,
         ):
             conn.execute(text(statement))
+        from scripts.weight_identity import init_crosswalk
+
+        init_crosswalk(conn)
 
 
 if __name__ == "__main__":

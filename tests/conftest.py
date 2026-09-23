@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 
 from scripts import init_db
+from scripts.weight_identity import init_crosswalk
 
 SCHEMA = "collector_ons_ex_cpi"
 
@@ -39,6 +40,7 @@ def engine(tmp_path: Path) -> Iterator[Engine]:
             logs,
         ):
             conn.execute(text(statement))
+        init_crosswalk(conn)
     try:
         yield created
     finally:

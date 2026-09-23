@@ -1,16 +1,10 @@
 """GUIDELINES 5.1 usable-series filtering for the EX-CPI target.
 
-The rule is the CPI collector's, but the protection that makes it safe cannot
-be copied from there, because the two repositories key their weights
-differently. In CPI a series carries its own weight under its own identity, so
-"is this series_id in the current weight regime" answers the question directly.
-Here it does not: an index is stored as ``EXCPI_INDEX_NATIVE_<CDID>`` while its
-weight is ``EXCPI_WEIGHT_NATIVE_<other CDID>``, a different identity entirely.
-Asking the CPI question of EX-CPI would find nothing and protect nothing.
+The official weight row and its component index share the same standardized
+series_id. The native MM23 weight CDID remains in weight_component_crosswalk.
 
-So protection goes through the published crosswalk instead: an index is
-load-bearing when the aggregate it belongs to still has a weight in the
-current regime, looked up by weight CDID. To be dropped, an aggregate must
+An index is load-bearing when it still has a weight in the current regime.
+To be dropped, an aggregate must
 have been retired by ONS on both sides -- index and weight -- which is what
 retirement actually looks like in MM23.
 
@@ -74,9 +68,7 @@ def _weighted_index_cdids(
     }
     weighted: set[str] = set()
     for aggregate in EX_CPI_SPECIAL_AGGREGATES:
-        # The stored weight identity is EXCPI_WEIGHT_NATIVE_<weight cdid>; any
-        # id ending in that CDID belongs to this aggregate.
-        if any(sid.endswith(aggregate["weight_cdid"]) for sid in live_weight_ids):
+        if f"EXCPI_INDEX_NATIVE_{aggregate['index_cdid']}" in live_weight_ids:
             weighted.add(aggregate["index_cdid"])
     return weighted
 

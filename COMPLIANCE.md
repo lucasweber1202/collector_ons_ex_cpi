@@ -1,5 +1,13 @@
 # EX-CPI compliance record
 
+> Historical certification record from 2026-09-14. The current branch changes
+> weight identities, adds supporting reconstruction indices and a component
+> crosswalk, and removes the noncanonical certification workflow. Earlier
+> assertions below about native-keyed weight tables, absence of operational
+> shares, ten total stored series and current template conformity are superseded.
+> New PostgreSQL and persisted-output reconstruction evidence is required before
+> this branch can be certified.
+
 Executed 2026-09-14. Every row is `PASS`, `FAIL`, or `SKIP — reason`. No evidence
 is reused from `collector_ons_cpi`; every figure below comes from this
 collector's own runs. Databricks execution remains `SKIP`, so this collector is

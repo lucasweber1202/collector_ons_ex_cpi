@@ -1,9 +1,7 @@
 """GUIDELINES 5.1 for the EX-CPI target.
 
-The protection here is crosswalk-based rather than same-identity, because an
-index is stored as EXCPI_INDEX_NATIVE_<cdid> while its weight is
-EXCPI_WEIGHT_NATIVE_<a different cdid>. Copying the CPI collector's check would
-silently protect nothing, so the first test below pins exactly that.
+Operational and original weights use their component index ID. The native
+MM23 weight CDID remains auditable in weight_component_crosswalk.
 """
 
 from __future__ import annotations
@@ -22,7 +20,7 @@ Points = Sequence[tuple[date, float | None]]
 
 FIRST = EX_CPI_SPECIAL_AGGREGATES[0]
 INDEX_ID = f"EXCPI_INDEX_NATIVE_{FIRST['index_cdid']}"
-WEIGHT_ID = f"EXCPI_WEIGHT_NATIVE_{FIRST['weight_cdid']}"
+WEIGHT_ID = INDEX_ID
 
 
 def _month_run(start: date, count: int) -> list[date]:
@@ -51,15 +49,9 @@ def _weight_rows(reference_date: date = LATEST) -> list[dict[str, object]]:
 # -- the crosswalk protection ---------------------------------------------
 
 
-def test_protection_is_crosswalk_based_not_same_identity() -> None:
-    """The index and its weight never share an id, so this must resolve them.
-
-    A same-identity check -- the shape CPI uses -- would find no match here and
-    leave a live aggregate unprotected. This test fails if anyone replaces the
-    crosswalk lookup with one.
-    """
-    assert INDEX_ID != WEIGHT_ID
-    assert FIRST["index_cdid"] not in WEIGHT_ID
+def test_protection_uses_component_identity() -> None:
+    """A current component weight protects its corresponding index."""
+    assert INDEX_ID == WEIGHT_ID
 
     stale_index = _series({INDEX_ID: [(date(2025, 1, 1), 100.0)]})
     report = classify_series(stale_index, _weight_rows(), latest_period=LATEST)
@@ -198,12 +190,10 @@ def test_a_newly_introduced_aggregate_is_not_mistaken_for_a_stub() -> None:
     assert report.short_history == ()
 
 
-def test_crosswalk_protection_outranks_the_history_rule() -> None:
+def test_component_weight_protection_outranks_the_history_rule() -> None:
     """A short, stopped aggregate whose weight is still current is kept.
 
-    This is the crosswalk protection doing its job against the second half of
-    5.1 as well as the first -- the weight is keyed on a different CDID, so a
-    same-identity check would not find it and would drop a live aggregate.
+    A current operational weight protects an index that stopped printing.
     """
     short_stopped = {INDEX_ID: _run(date(2026, 3, 1), 3)}
     report = classify_series(_series(short_stopped), _weight_rows(), latest_period=LATEST)

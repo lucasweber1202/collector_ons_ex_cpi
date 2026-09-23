@@ -82,3 +82,129 @@ def test_migration_fails_on_colliding_natural_key_without_changing_rows(engine: 
             ).scalar_one()
             == 2
         )
+
+
+def test_reconstructs_three_aggregates_and_regimes_from_persisted_rows(engine: Engine) -> None:
+    """The reconstruction reads only stored SQL rows, including December bases."""
+    pairs = [row for row in component_rows() if row["role"] != "headline"]
+    aggregates = list(dict.fromkeys(str(row["aggregate_series_id"]) for row in pairs))[:3]
+    collected = datetime(2026, 9, 1, 12, 0)  # noqa: DTZ001
+    with engine.begin() as conn:
+        upsert_crosswalk(conn)
+        for aggregate in aggregates:
+            members = [row for row in pairs if row["aggregate_series_id"] == aggregate]
+            for member in members:
+                sid = member["series_id"]
+                assert sid is not None
+                conn.execute(
+                    text(
+                        "INSERT OR IGNORE INTO collector_ons_ex_cpi.metadata "
+                        "(series_id, name, country, observation_count, source_url, collected_at) "
+                        "VALUES (:sid, :sid, 'GBP', 1, 'https://www.ons.gov.uk/', :collected)"
+                    ),
+                    {"sid": sid, "collected": collected},
+                )
+            for year in (2016, 2018, 2026):
+                december = date(year - 1, 12, 1)
+                for month in (1, 2):
+                    period = date(year, month, 1)
+                    for member in members:
+                        sid = member["series_id"]
+                        assert sid is not None
+                        is_exclusion = member["role"] == "exclusion"
+                        share = 0.8 if is_exclusion else 0.2
+                        value = (110 if is_exclusion else 105) + month - 1
+                        for ref, level in ((december, 100.0), (period, float(value))):
+                            conn.execute(
+                                text(
+                                    "INSERT OR IGNORE INTO collector_ons_ex_cpi.time_series "
+                                    "(series_id, reference_date, vintage_date, value, collected_at) "
+                                    "VALUES (:sid, :ref, :vintage, :value, :collected)"
+                                ),
+                                {
+                                    "sid": sid,
+                                    "ref": ref,
+                                    "vintage": collected.date(),
+                                    "value": level,
+                                    "collected": collected,
+                                },
+                            )
+                        for table, column, weight in (
+                            ("weights", "", share),
+                            ("original_weights", ", weight_base_year", share * 1000),
+                        ):
+                            conn.execute(
+                                text(
+                                    f"INSERT INTO collector_ons_ex_cpi.{table} "
+                                    f"(series_id, reference_date, vintage_date, weight, collected_at{column}) "
+                                    f"VALUES (:sid, :ref, :vintage, :weight, :collected{', :year' if column else ''})"
+                                ),
+                                {
+                                    "sid": sid,
+                                    "ref": period,
+                                    "vintage": collected.date(),
+                                    "weight": weight,
+                                    "collected": collected,
+                                    "year": year,
+                                },
+                            )
+                    headline = "EXCPI_INDEX_NATIVE_D7BT"
+                    conn.execute(
+                        text(
+                            "INSERT OR IGNORE INTO collector_ons_ex_cpi.metadata "
+                            "(series_id, name, country, observation_count, source_url, collected_at) "
+                            "VALUES (:sid, :sid, 'GBP', 1, 'https://www.ons.gov.uk/', :collected)"
+                        ),
+                        {"sid": headline, "collected": collected},
+                    )
+                    for ref, level in ((december, 100.0), (period, 109.0 + month - 1)):
+                        conn.execute(
+                            text(
+                                "INSERT OR IGNORE INTO collector_ons_ex_cpi.time_series "
+                                "(series_id, reference_date, vintage_date, value, collected_at) "
+                                "VALUES (:sid, :ref, :vintage, :value, :collected)"
+                            ),
+                            {
+                                "sid": headline,
+                                "ref": ref,
+                                "vintage": collected.date(),
+                                "value": level,
+                                "collected": collected,
+                            },
+                        )
+
+        # No Python parser objects or downloads enter this query: SQL joins
+        # recover both component levels, December bases and operational shares.
+        rows = conn.execute(
+            text(
+                "SELECT c.aggregate_series_id, w.reference_date, "
+                "SUM(w.weight * cur.value / base.value) * hb.value AS reconstructed, "
+                "hn.value AS published "
+                "FROM collector_ons_ex_cpi.weight_component_crosswalk c "
+                "JOIN collector_ons_ex_cpi.weights w ON w.series_id=c.series_id "
+                "JOIN collector_ons_ex_cpi.time_series cur "
+                "ON cur.series_id=c.series_id AND cur.reference_date=w.reference_date "
+                "JOIN collector_ons_ex_cpi.time_series base "
+                "ON base.series_id=c.series_id AND base.reference_date="
+                "date(w.reference_date, 'start of year', '-1 month') "
+                "JOIN collector_ons_ex_cpi.time_series hn "
+                "ON hn.series_id='EXCPI_INDEX_NATIVE_D7BT' AND hn.reference_date=w.reference_date "
+                "JOIN collector_ons_ex_cpi.time_series hb "
+                "ON hb.series_id='EXCPI_INDEX_NATIVE_D7BT' AND hb.reference_date=base.reference_date "
+                "WHERE c.role IN ('exclusion', 'complement') "
+                "GROUP BY c.aggregate_series_id, w.reference_date, hb.value, hn.value"
+            )
+        ).all()
+        assert len(rows) == 3 * 3 * 2
+        assert all(abs(row.reconstructed - row.published) < 1e-9 for row in rows)
+        for table in ("weights", "original_weights"):
+            assert (
+                conn.execute(
+                    text(
+                        f"SELECT COUNT(*) FROM collector_ons_ex_cpi.{table} w "
+                        "LEFT JOIN collector_ons_ex_cpi.metadata m ON m.series_id=w.series_id "
+                        "WHERE m.series_id IS NULL"
+                    )
+                ).scalar_one()
+                == 0
+            )

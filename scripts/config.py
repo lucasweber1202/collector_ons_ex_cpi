@@ -27,6 +27,17 @@ METADATA_TABLE = "metadata"
 TIME_SERIES_TABLE = "time_series"
 ORIGINAL_WEIGHTS_TABLE = "original_weights"
 WEIGHTS_TABLE = "weights"
+
+# GUIDELINES 5.1 usable-series filtering for the exclusion-aggregate target.
+#
+# No minimum-history rule: ONS can introduce a new exclusion aggregate at any
+# release, and a newly published aggregate is exactly what a forecast target
+# most wants. Staleness is the only drop signal.
+#
+# Six months matches the CPI collector. These are monthly indices published on
+# the CPI release schedule, so six consecutive missed prints means ONS has
+# retired the aggregate, not that it is late.
+MAX_STALE_MONTHS = int(os.getenv("COLLECTOR_MAX_STALE_MONTHS", "6"))
 LOGS_TABLE = "logs"
 
 START_DATE_LOOKBACK_MONTHS = 5

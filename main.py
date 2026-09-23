@@ -46,6 +46,7 @@ from scripts.special_aggregate_vintages import (
 )
 from scripts.special_aggregates import collect_mm23_special_aggregates, complement_weight_checks
 from scripts.time_series import get_max_reference_date, upsert_time_series
+from scripts.usable_series import apply_usable_series_filter
 from scripts.weights import upsert_weights
 
 logger = logging.getLogger("main")
@@ -229,6 +230,20 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     reconciliation_rows = reconstruction_checks(panel, regimes)
     _validate(reconciliation_rows, "EX-CPI reconstruction")
 
+    # GUIDELINES 5.1, after the reconstruction gate and before the
+    # transaction: the gate therefore still scores every published aggregate,
+    # so the filter cannot mask a reconstruction failure by removing the
+    # aggregate that caused it.
+    catalog = get_series_catalog()
+    stored_observations, catalog, _usability = apply_usable_series_filter(
+        stored_observations,
+        catalog,
+        rows,
+        latest_period=max(stored_observations),
+    )
+    if not stored_observations:
+        raise ValueError("Usable-series filter removed every series; refusing to persist")
+
     collected_at = datetime.now(UTC)
     with engine.begin() as conn:
         assert_current_series_ids(conn)
@@ -236,7 +251,7 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
         new_weights, weight_vintages = upsert_original_weights(conn, rows, collected_at)
         new_shares, share_vintages = upsert_weights(conn, share_rows, collected_at)
         metadata_inserted, metadata_updated = upsert_metadata(
-            conn, stored_observations, collected_at, get_series_catalog()
+            conn, stored_observations, collected_at, catalog
         )
     logger.info(
         "Run result: observations=%d vintages=%d official_weights=%d "

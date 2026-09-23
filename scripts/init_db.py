@@ -5,7 +5,13 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from scripts.config import LOGS_TABLE, METADATA_TABLE, SCHEMA_NAME, TIME_SERIES_TABLE
+from scripts.config import (
+    LOGS_TABLE,
+    METADATA_TABLE,
+    SCHEMA_NAME,
+    TIME_SERIES_TABLE,
+    WEIGHTS_TABLE,
+)
 from scripts.db import build_engine
 
 # PostgreSQL and Databricks SQL share no spelling for a 64-bit float. Spark's
@@ -72,6 +78,36 @@ CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.original_weights (
 )
 """
 
+# Operational shares, not official basket points.
+#
+# MM23 publishes each exclusion aggregate and its complement as annual weights
+# in parts per thousand; those land verbatim in original_weights, carrying
+# their regime year. They do NOT reconstruct the published index if applied
+# directly to index levels -- measured against live MM23, that leaves
+# residuals up to 1.45 index points, scaling with the size of the complement,
+# which is systematic model error rather than rounding.
+#
+# The reconstruction that does close is the December-linked Young form, where
+# the shares are applied to price ratios rebased on the previous December:
+#
+#   I_all(t) = I_all(Dec) * ( s_ex * I_ex(t)/I_ex(Dec)
+#                           + s_c  * I_c (t)/I_c (Dec) )
+#
+# with s = w / (w_ex + w_c). That lands at a max residual of 0.18 index
+# points, uniform across all ten aggregates -- the rounding floor implied by
+# MM23 publishing indices to one decimal. Those shares are the operational
+# system and they live here, in [0, 1], never parts per thousand.
+CREATE_WEIGHTS_TABLE = f"""
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{WEIGHTS_TABLE} (
+    series_id VARCHAR(200) NOT NULL,
+    reference_date DATE NOT NULL,
+    vintage_date DATE NOT NULL,
+    weight {{double}} NOT NULL,
+    collected_at TIMESTAMP NOT NULL,
+    CONSTRAINT pk_weights PRIMARY KEY (series_id, reference_date, vintage_date)
+)
+"""
+
 
 def double_type(dialect: str) -> str:
     """Return the 64-bit float spelling this SQL dialect accepts."""
@@ -87,6 +123,7 @@ def init_db(engine: Engine) -> None:
             CREATE_METADATA_TABLE,
             CREATE_TIME_SERIES_TABLE.format(double=double),
             CREATE_ORIGINAL_WEIGHTS_TABLE.format(double=double),
+            CREATE_WEIGHTS_TABLE.format(double=double),
             CREATE_LOGS_TABLE,
         ):
             conn.execute(text(statement))

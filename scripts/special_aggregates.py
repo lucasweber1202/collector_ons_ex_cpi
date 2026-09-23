@@ -22,6 +22,9 @@ MM23_DOWNLOAD_URL = (
     "https://www.ons.gov.uk/file?uri=%2Feconomy%2Finflationandpriceindices%2Fdatasets%2F"
     "consumerpriceindices%2Fcurrent%2Fmm23.csv"
 )
+# The published all-items CPI. It is not an exclusion aggregate, but every
+# reconstruction check is against it, so the panel has to carry it.
+HEADLINE_INDEX_CDID = "D7BT"
 MM23_WEIGHT_TOTAL = 1000.0
 MM23_WEIGHT_SUM_TOLERANCE = 0.01
 
@@ -199,6 +202,17 @@ def required_mm23_cdids() -> frozenset[str]:
     return frozenset(values)
 
 
+def required_mm23_columns() -> frozenset[str]:
+    """Every MM23 column the parser must find, which is the crosswalk plus one.
+
+    The headline all-items index is not one of the six roles an exclusion
+    aggregate plays, so it is deliberately absent from the crosswalk. It is
+    still required in the file, because every reconstruction check scores
+    against it.
+    """
+    return required_mm23_cdids() | {HEADLINE_INDEX_CDID}
+
+
 def resolve_table38_alt_series(
     catalog: Mapping[str, Mapping[str, str]],
 ) -> tuple[dict[str, str], list[str]]:
@@ -285,7 +299,7 @@ def parse_mm23_special_aggregates(blob: bytes) -> MM23SpecialPanel:
     if "CDID" not in frame.columns:
         raise ValueError("MM23 CSV has no CDID period column after the title row")
 
-    required = required_mm23_cdids()
+    required = required_mm23_columns()
     missing = sorted(required - set(normalized))
     if missing:
         raise ValueError(f"MM23 CSV is missing reviewed ex-CPI CDIDs: {missing}")
@@ -297,6 +311,7 @@ def parse_mm23_special_aggregates(blob: bytes) -> MM23SpecialPanel:
     index_cdids = frozenset(
         [row["index_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES]
         + [row["complement_index_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES]
+        + [HEADLINE_INDEX_CDID]
     )
     rate_cdids = frozenset(
         [row["rate_12m_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES]

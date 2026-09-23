@@ -26,6 +26,7 @@ CATALOG_NAME = "macrobond_inhouse"
 METADATA_TABLE = "metadata"
 TIME_SERIES_TABLE = "time_series"
 ORIGINAL_WEIGHTS_TABLE = "original_weights"
+WEIGHTS_TABLE = "weights"
 LOGS_TABLE = "logs"
 
 START_DATE_LOOKBACK_MONTHS = 5

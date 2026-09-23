@@ -98,7 +98,7 @@ jobs:
       - run: set -o pipefail; python main.py --no-watch | tee postgresql-run-2.log
       - name: Assert second-run no-op
         run: >-
-          grep -F 'Run result: observations=0 vintages=0 official_weights=0 weight_vintages=0 metadata_inserted=0 metadata_updated=0'
+          grep -F 'Run result: observations=0 vintages=0 official_weights=0 weight_vintages=0 operational_shares=0 share_vintages=0 metadata_inserted=0 metadata_updated=0'
           postgresql-run-2.log
       - name: Record database counts
         if: always()
@@ -108,6 +108,7 @@ jobs:
           (SELECT COUNT(*) FROM collector_ons_ex_cpi.metadata) AS metadata_count,
           (SELECT COUNT(*) FROM collector_ons_ex_cpi.time_series) AS time_series_count,
           (SELECT COUNT(*) FROM collector_ons_ex_cpi.original_weights) AS original_weights_count,
+          (SELECT COUNT(*) FROM collector_ons_ex_cpi.weights) AS operational_share_count,
           (SELECT COUNT(*) FROM collector_ons_ex_cpi.logs) AS logs_count,
           (SELECT MIN(reference_date) FROM collector_ons_ex_cpi.time_series) AS first_reference_date,
           (SELECT MAX(reference_date) FROM collector_ons_ex_cpi.time_series) AS last_reference_date;"

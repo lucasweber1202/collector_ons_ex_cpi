@@ -8,7 +8,12 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from scripts.weight_identity import component_rows, migrate_legacy_weight_ids, upsert_crosswalk
+from scripts.weight_identity import (
+    component_rows,
+    earliest_legacy_weight_month,
+    migrate_legacy_weight_ids,
+    upsert_crosswalk,
+)
 
 
 def test_migration_preserves_every_measure_and_is_idempotent(engine: Engine) -> None:
@@ -82,6 +87,23 @@ def test_migration_fails_on_colliding_natural_key_without_changing_rows(engine: 
             ).scalar_one()
             == 2
         )
+
+
+def test_incremental_migration_discovers_earliest_legacy_regime(engine: Engine) -> None:
+    component = next(row for row in component_rows() if row["role"] == "exclusion")
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO collector_ons_ex_cpi.original_weights "
+                "(series_id, reference_date, vintage_date, weight, weight_base_year, collected_at) "
+                "VALUES (:sid, '1996-01-01', '2025-01-01', 800, 1996, '2025-01-01 00:00:00')"
+            ),
+            {"sid": "EXCPI_WEIGHT_NATIVE_" + str(component["native_weight_cdid"])},
+        )
+    assert earliest_legacy_weight_month(engine) == date(1996, 1, 1)
+    with engine.begin() as conn:
+        migrate_legacy_weight_ids(conn)
+    assert earliest_legacy_weight_month(engine) is None
 
 
 def test_reconstructs_three_aggregates_and_regimes_from_persisted_rows(engine: Engine) -> None:

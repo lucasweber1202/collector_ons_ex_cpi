@@ -48,6 +48,7 @@ from scripts.special_aggregates import collect_mm23_special_aggregates, compleme
 from scripts.time_series import get_max_reference_date, upsert_time_series
 from scripts.usable_series import apply_usable_series_filter
 from scripts.weight_identity import (
+    earliest_legacy_weight_month,
     migrate_legacy_weight_ids,
     supporting_catalog,
     supporting_observations,
@@ -176,6 +177,7 @@ def _weight_rows(
 
 def _collect(args: argparse.Namespace, engine: Engine) -> int:
     init_db(engine)
+    legacy_start = earliest_legacy_weight_month(engine)
     latest = get_max_reference_date(engine)
     if args.start_date:
         start = args.start_date.replace(day=1)
@@ -257,7 +259,9 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
             stored_observations[month] = {
                 series_id: value for series_id, value in values.items() if series_id in catalog
             }
-    support = supporting_observations(panel.monthly_indices, start)
+    support = supporting_observations(
+        panel.monthly_indices, min(start, legacy_start) if legacy_start else start
+    )
     for month, support_values in support.items():
         stored_observations.setdefault(month, {}).update(support_values)
     catalog.update(supporting_catalog())

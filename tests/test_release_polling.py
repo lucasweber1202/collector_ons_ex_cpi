@@ -115,6 +115,7 @@ def _route(monkeypatch: pytest.MonkeyPatch, *, latest: date | None) -> list[date
         raise _StopRouting
 
     monkeypatch.setattr(main, "init_db", lambda _engine: None)
+    monkeypatch.setattr(main, "earliest_legacy_weight_month", lambda _engine: None)
     monkeypatch.setattr(main, "get_max_reference_date", lambda _engine: latest)
     monkeypatch.setattr(main, "collect_raw_data", collect)
     return windows

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from sqlalchemy import text
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, Engine
 
 from scripts.config import SCHEMA_NAME
 from scripts.extract import SOURCE_URL
@@ -100,6 +100,21 @@ def migrate_legacy_weight_ids(conn: Connection) -> None:
         ("original_weights", "EXCPI_WEIGHT_NATIVE_"),
     ):
         full_table = f"{SCHEMA_NAME}.{table}"
+        recognized = {
+            prefix + native
+            for row in component_rows()
+            if (native := row["native_weight_cdid"]) is not None
+        }
+        legacy_ids = {
+            str(r[0])
+            for r in conn.execute(
+                text(f"SELECT DISTINCT series_id FROM {full_table} WHERE series_id LIKE :prefix"),
+                {"prefix": prefix + "%"},
+            )
+        }
+        unknown = legacy_ids - recognized
+        if unknown:
+            raise ValueError(f"Unmapped legacy {table} identifiers: {sorted(unknown)}")
         for row in component_rows():
             native = row["native_weight_cdid"]
             if native is None:
@@ -138,6 +153,20 @@ def migrate_legacy_weight_ids(conn: Connection) -> None:
                 text(f"UPDATE {full_table} SET series_id=:new WHERE series_id=:old"),
                 {"old": prefix + native, "new": row["series_id"]},
             )
+
+
+def earliest_legacy_weight_month(engine: Engine) -> date | None:
+    """Include all legacy regimes in the support-index backfill during migration."""
+    with engine.connect() as conn:
+        value = conn.execute(
+            text(
+                f"SELECT MIN(reference_date) FROM {SCHEMA_NAME}.original_weights "
+                "WHERE series_id LIKE 'EXCPI_WEIGHT_NATIVE_%'"
+            )
+        ).scalar_one()
+    if value is None:
+        return None
+    return value.date() if hasattr(value, "date") else date.fromisoformat(str(value))
 
 
 def supporting_observations(

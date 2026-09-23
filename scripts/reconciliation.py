@@ -44,10 +44,33 @@ from scripts.special_aggregates import (
     MM23SpecialPanel,
 )
 
-# Two decimals of headroom over the 0.18 observed across 1996-2026. Tightening
-# this below the rounding floor would make the check fail on ONS's published
-# precision rather than on anything wrong with the reconstruction.
+# Measured over all 3,680 (aggregate, month) reconstructions, 1996-2026:
+#
+#   median 0.0413   p99 0.1439   p99.5 0.1547   p99.9 0.1644   max 0.1832
+#
+# The residual is uniform rather than structured -- every one of the ten
+# aggregates maxes between 0.1439 and 0.1832, and every decade between 0.1591
+# and 0.1832. Uniformity across both cuts is the signature of a rounding floor,
+# not of model error: MM23 publishes indices to one decimal, and this
+# reconstruction combines five rounded inputs before being compared against a
+# sixth.
+#
+# 0.35 is kept, at x1.91 over the observed maximum. Tightening buys nothing
+# real: the regression this gate exists to catch is level aggregation, which
+# errs at 1.4492 -- eight times this tolerance -- so 0.20 and 0.35 detect it
+# equally, while 0.20 sits only x1.09 over a maximum that is itself set by the
+# source's precision. That trades no extra detection for real false-failure
+# risk on a future month with worse rounding luck.
+#
+# tests/test_reconciliation.py bounds this on both sides, so it can be neither
+# inflated to hide a regression nor tightened into flakiness.
 RECONSTRUCTION_TOLERANCE = 0.35
+
+# The worst residual observed over the full published history, and the error
+# the discredited level-aggregation form produces. The tolerance must sit
+# strictly between them.
+OBSERVED_MAX_RESIDUAL = 0.1832
+LEVEL_AGGREGATION_MAX_RESIDUAL = 1.4492
 
 # A pair of shares must still sum to one after normalisation.
 SHARE_SUM_TOLERANCE = 1e-9

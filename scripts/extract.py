@@ -23,7 +23,7 @@ from scripts.config import (
     REQUEST_TIMEOUT,
     USER_AGENT,
 )
-from scripts.special_aggregates import EX_CPI_SPECIAL_AGGREGATES
+from scripts.special_aggregates import EX_CPI_SPECIAL_AGGREGATES, HEADLINE_INDEX_CDID
 
 logger = logging.getLogger(__name__)
 SOURCE_NAME = "Office for National Statistics"
@@ -51,6 +51,9 @@ TABLE38_FIRST_DATA_ROW = 7
 TABLE38_DATE_COLUMN = 1
 TABLE38_FIRST_SERIES_COLUMN = 2
 TARGET_CDIDS = frozenset(row["index_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES)
+SUPPORT_CDIDS = frozenset(
+    {HEADLINE_INDEX_CDID} | {row["complement_index_cdid"] for row in EX_CPI_SPECIAL_AGGREGATES}
+)
 ECO_GROUPS = frozenset({"consumer_prices"})
 UNITS = frozenset({"index"})
 FREQUENCIES = frozenset({"monthly"})
@@ -73,7 +76,7 @@ def parse_series_id(series_id: str) -> tuple[str, str, str, str]:
     parts = series_id.split("_")
     if len(parts) != 4 or parts[:3] != ["EXCPI", "INDEX", "NATIVE"]:
         raise ValueError(f"Invalid EX-CPI series_id: {series_id}")
-    if parts[3] not in TARGET_CDIDS:
+    if parts[3] not in TARGET_CDIDS | SUPPORT_CDIDS:
         raise ValueError(f"Unknown EX-CPI native CDID: {parts[3]}")
     return tuple(parts)  # type: ignore[return-value]
 

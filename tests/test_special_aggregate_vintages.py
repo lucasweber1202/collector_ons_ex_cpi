@@ -243,10 +243,10 @@ def test_mm23_original_weight_layer_preserves_source_cdid_and_index_mapping() ->
 
     originals, audit = build_mm23_original_weight_layer(regimes, _catalog())
 
-    assert originals[date(2026, 1, 1)]["EXCPI_WEIGHT_NATIVE_A9FU"] == 702.0
-    assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["native_id"] == "A9FU"
-    assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["mapped_series_id"].endswith("_DKC6")
-    assert audit["EXCPI_WEIGHT_NATIVE_A9FU"]["dataset"].startswith("ONS Consumer price inflation")
+    assert originals[date(2026, 1, 1)]["EXCPI_INDEX_NATIVE_DKC6"] == 702.0
+    assert audit["EXCPI_INDEX_NATIVE_DKC6"]["native_id"] == "A9FU"
+    assert audit["EXCPI_INDEX_NATIVE_DKC6"]["mapped_series_id"].endswith("_DKC6")
+    assert audit["EXCPI_INDEX_NATIVE_DKC6"]["dataset"].startswith("ONS Consumer price inflation")
     assert len(originals[date(2026, 1, 1)]) == 2 * len(EX_CPI_SPECIAL_AGGREGATES)
     assert len(audit) == 2 * len(EX_CPI_SPECIAL_AGGREGATES)
 

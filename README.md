@@ -17,7 +17,7 @@ Standalone monthly collector for ten UK CPI exclusion (special aggregate) indice
 | CPI excluding housing, water, electricity, gas and other fuels | DKD4 | EXCPI_INDEX_NATIVE_DKD4 |
 | CPI excluding education, health and social protection | DKD5 | EXCPI_INDEX_NATIVE_DKD5 |
 
-Only official index levels from Table 38 are stored in `time_series`. MM23 published 12-month rates are validation-only. Official MM23 exclusion weights are stored unchanged in `original_weights`; no derived operational `weights` layer is produced.
+The ten forecast targets are official Table 38 index levels. MM23 headline and complement index levels are also stored in `time_series` as supporting reconstruction series, with their own metadata. Published 12-month rates remain validation-only. The published MM23 basket is stored unchanged in `original_weights`; normalized December-linked Young shares are stored in `weights`. Both weight tables use the index component's `series_id`. `weight_component_crosswalk` retains the native weight CDID, aggregate, component, role and source.
 
 ## Sources
 

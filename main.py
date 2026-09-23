@@ -47,6 +47,13 @@ from scripts.special_aggregate_vintages import (
 from scripts.special_aggregates import collect_mm23_special_aggregates, complement_weight_checks
 from scripts.time_series import get_max_reference_date, upsert_time_series
 from scripts.usable_series import apply_usable_series_filter
+from scripts.weight_identity import (
+    earliest_legacy_weight_month,
+    migrate_legacy_weight_ids,
+    supporting_catalog,
+    supporting_observations,
+    upsert_crosswalk,
+)
 from scripts.weights import upsert_weights
 
 logger = logging.getLogger("main")
@@ -170,6 +177,7 @@ def _weight_rows(
 
 def _collect(args: argparse.Namespace, engine: Engine) -> int:
     init_db(engine)
+    legacy_start = earliest_legacy_weight_month(engine)
     latest = get_max_reference_date(engine)
     if args.start_date:
         start = args.start_date.replace(day=1)
@@ -244,9 +252,25 @@ def _collect(args: argparse.Namespace, engine: Engine) -> int:
     if not stored_observations:
         raise ValueError("Usable-series filter removed every series; refusing to persist")
 
+    # The preceding December target level is needed as a Young-index base.
+    # Keep the source values, without adding any new forecast target identity.
+    for month, values in observations.items():
+        if month < start and month.month == 12:
+            stored_observations[month] = {
+                series_id: value for series_id, value in values.items() if series_id in catalog
+            }
+    support = supporting_observations(
+        panel.monthly_indices, min(start, legacy_start) if legacy_start else start
+    )
+    for month, support_values in support.items():
+        stored_observations.setdefault(month, {}).update(support_values)
+    catalog.update(supporting_catalog())
+
     collected_at = datetime.now(UTC)
     with engine.begin() as conn:
         assert_current_series_ids(conn)
+        migrate_legacy_weight_ids(conn)
+        upsert_crosswalk(conn)
         new_obs, new_vintages = upsert_time_series(conn, stored_observations, collected_at)
         new_weights, weight_vintages = upsert_original_weights(conn, rows, collected_at)
         new_shares, share_vintages = upsert_weights(conn, share_rows, collected_at)

@@ -319,8 +319,8 @@ def map_exclusion_weight_regimes_to_table38(
     """Map MM23 weight CDIDs onto their existing Table 38 EX-CPI index targets.
 
     This target-ID view is useful for validation and joins. It is not the
-    preferred persistence identity for `original_weights`, which preserves the source weight identifier via
-    EXCPI_WEIGHT_NATIVE_<CDID>.
+    persistence identity for `original_weights`, whose standardized key is the
+    component index ID; native weight CDIDs live in weight_component_crosswalk.
     """
     resolved, missing = resolve_table38_alt_series(catalog)
     if missing:
@@ -357,11 +357,11 @@ def build_mm23_original_weight_layer(
     regimes: Mapping[date, Mapping[str, float]],
     catalog: Mapping[str, Mapping[str, str]],
 ) -> tuple[dict[date, dict[str, float]], dict[str, dict[str, str]]]:
-    """Build source-ID weights plus the audit crosswalk to Table 38 EX-CPI index series.
+    """Build component-ID weights plus a native MM23 weight audit map.
 
-    The official source row keeps its own stable identifier in
-    original_weights, while the audit map records the exact Table 38 target. The native MM23 weight CDID therefore remains
-    auditable instead of being replaced by the related index CDID.
+    The official value remains untouched. The index component supplies the
+    standardized ID; the native weight CDID remains in the audit map and the
+    persisted weight_component_crosswalk.
     """
     resolved, missing = resolve_table38_alt_series(catalog)
     if missing:
@@ -375,7 +375,12 @@ def build_mm23_original_weight_layer(
             (aggregate["weight_cdid"], "exclusion"),
             (aggregate["complement_weight_cdid"], "complement"),
         ):
-            source_id = mm23_original_weight_id(weight_cdid)
+            component_cdid = (
+                aggregate["index_cdid"]
+                if suffix == "exclusion"
+                else aggregate["complement_index_cdid"]
+            )
+            source_id = f"EXCPI_INDEX_NATIVE_{component_cdid}"
             source_id_by_weight[weight_cdid] = source_id
             audit[source_id] = {
                 "code": weight_cdid,

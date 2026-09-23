@@ -18,6 +18,7 @@ def _record(calls: list[str], label: str, value: T) -> T:
 
 
 import main
+from scripts.special_aggregates import MM23SpecialPanel
 
 
 def _catalog() -> dict[str, dict[str, str]]:
@@ -48,7 +49,11 @@ def _patch_pipeline(
         "collect_raw_data",
         lambda start: _record(calls, f"table38:{start.isoformat()}", observations),
     )
-    monkeypatch.setattr(main, "collect_mm23_special_aggregates", lambda: object())
+    monkeypatch.setattr(
+        main,
+        "collect_mm23_special_aggregates",
+        lambda: MM23SpecialPanel(annual_weights={}, monthly_indices={}, monthly_rates_12m={}),
+    )
     monkeypatch.setattr(
         main,
         "complement_weight_checks",
@@ -80,7 +85,7 @@ def _patch_pipeline(
         "_weight_rows",
         lambda _regimes, _series_catalog: [
             {
-                "series_id": "EXCPI_WEIGHT_NATIVE_A9FU",
+                "series_id": "EXCPI_INDEX_NATIVE_DKC6",
                 "reference_date": requested,
                 "weight": 700.0,
                 "weight_base_year": 2026,
@@ -97,7 +102,7 @@ def _patch_pipeline(
         "build_operational_shares",
         lambda _regimes: [
             {
-                "series_id": "EXCPI_SHARE_NATIVE_A9FU",
+                "series_id": "EXCPI_INDEX_NATIVE_DKC6",
                 "reference_date": requested,
                 "weight": 0.7,
             }

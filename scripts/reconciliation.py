@@ -105,6 +105,14 @@ def build_operational_shares(
     """
     rows: list[dict[str, Any]] = []
     for month, values in sorted(regimes.items()):
+        # The headline has no parent: its operational share of itself is 1.
+        rows.append(
+            {
+                "series_id": f"EXCPI_INDEX_NATIVE_{HEADLINE_INDEX_CDID}",
+                "reference_date": month,
+                "weight": 1.0,
+            }
+        )
         for aggregate in EX_CPI_SPECIAL_AGGREGATES:
             exclusion = values.get(aggregate["weight_cdid"])
             complement = values.get(aggregate["complement_weight_cdid"])

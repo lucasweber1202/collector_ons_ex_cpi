@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from scripts.config import MAX_STALE_MONTHS
+from scripts.config import MAX_STALE_MONTHS, MIN_HISTORY_YEARS
 from scripts.special_aggregates import EX_CPI_SPECIAL_AGGREGATES
 
 logger = logging.getLogger(__name__)
@@ -42,11 +42,12 @@ class UsabilityReport:
     kept: tuple[str, ...]
     stale: tuple[str, ...]
     empty: tuple[str, ...]
+    short_history: tuple[str, ...]
     protected_by_weight: tuple[str, ...]
 
     @property
     def dropped(self) -> tuple[str, ...]:
-        return tuple(sorted(set(self.stale) | set(self.empty)))
+        return tuple(sorted(set(self.stale) | set(self.empty) | set(self.short_history)))
 
 
 def _month_distance(later: date, earlier: date) -> int:
@@ -86,17 +87,27 @@ def classify_series(
     *,
     latest_period: date,
     max_stale_months: int = MAX_STALE_MONTHS,
+    min_history_years: float = MIN_HISTORY_YEARS,
 ) -> UsabilityReport:
-    """Decide, per stored index series_id, whether 5.1 admits it."""
+    """Decide, per stored index series_id, whether 5.1 admits it.
+
+    Both halves of 5.1 apply: obsolete (last print older than
+    max_stale_months) and insufficient history (non-null span shorter than
+    min_history_years). The second only fires when the aggregate is also
+    unprotected by the crosswalk and no longer printing, so a newly introduced
+    aggregate -- short by definition -- is never reached.
+    """
     weighted_cdids = _weighted_index_cdids(weight_rows, latest_period, max_stale_months)
     series_ids = {sid for values in observations.values() for sid in values}
     kept: list[str] = []
     stale: list[str] = []
     empty: list[str] = []
+    short: list[str] = []
     protected: list[str] = []
     for series_id in sorted(series_ids):
         months = [m for m, values in observations.items() if values.get(series_id) is not None]
         last_seen = max(months) if months else None
+        span_years = (max(months) - min(months)).days / 365.25 if len(months) > 1 else 0.0
         is_weighted = any(series_id.endswith(cdid) for cdid in weighted_cdids)
         if is_weighted:
             kept.append(series_id)
@@ -109,11 +120,15 @@ def classify_series(
         if _month_distance(latest_period, last_seen) > max_stale_months:
             stale.append(series_id)
             continue
+        if last_seen != latest_period and span_years < min_history_years:
+            short.append(series_id)
+            continue
         kept.append(series_id)
     return UsabilityReport(
         kept=tuple(kept),
         stale=tuple(stale),
         empty=tuple(empty),
+        short_history=tuple(short),
         protected_by_weight=tuple(protected),
     )
 
@@ -125,6 +140,7 @@ def apply_usable_series_filter(
     *,
     latest_period: date,
     max_stale_months: int = MAX_STALE_MONTHS,
+    min_history_years: float = MIN_HISTORY_YEARS,
 ) -> tuple[Observations, dict[str, dict[str, str]], UsabilityReport]:
     """Prune unusable aggregates from what is about to be written.
 
@@ -133,17 +149,24 @@ def apply_usable_series_filter(
     observation set are never deleted as collateral.
     """
     report = classify_series(
-        observations, weight_rows, latest_period=latest_period, max_stale_months=max_stale_months
+        observations,
+        weight_rows,
+        latest_period=latest_period,
+        max_stale_months=max_stale_months,
+        min_history_years=min_history_years,
     )
     drop = set(report.dropped)
     logger.info(
-        "Usable-series filter: kept %d, dropped %d (stale=%d empty=%d; "
-        "max_stale_months=%d, latest_period=%s)",
+        "Usable-series filter: kept %d, dropped %d (stale=%d empty=%d "
+        "short_history=%d; max_stale_months=%d, min_history_years=%s, "
+        "latest_period=%s)",
         len(report.kept),
         len(report.dropped),
         len(report.stale),
         len(report.empty),
+        len(report.short_history),
         max_stale_months,
+        min_history_years,
         latest_period,
     )
     if report.protected_by_weight:

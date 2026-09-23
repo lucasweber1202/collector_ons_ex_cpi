@@ -16,6 +16,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from scripts.reconciliation import (
+    LEVEL_AGGREGATION_MAX_RESIDUAL,
+    OBSERVED_MAX_RESIDUAL,
     RECONSTRUCTION_TOLERANCE,
     build_operational_shares,
     operational_share_id,
@@ -232,3 +234,31 @@ def test_level_aggregation_is_not_what_is_being_checked() -> None:
     assert isinstance(reconstructed, float)
     assert reconstructed == pytest.approx(linked_form)
     assert reconstructed != pytest.approx(level_form)
+
+
+# -- the tolerance is bounded on both sides -------------------------------
+
+
+def test_tolerance_clears_the_source_rounding_floor() -> None:
+    """Must not fail on ONS's own published precision.
+
+    The observed maximum over 3,680 reconstructions is itself set by MM23
+    publishing to one decimal. A tolerance at or below it would make the gate
+    fail on rounding luck rather than on anything wrong.
+    """
+    assert RECONSTRUCTION_TOLERANCE > OBSERVED_MAX_RESIDUAL
+    assert RECONSTRUCTION_TOLERANCE >= OBSERVED_MAX_RESIDUAL * 1.5
+
+
+def test_tolerance_still_catches_level_aggregation() -> None:
+    """Must stay far below the regression it exists to detect.
+
+    Applying published parts-per-thousand directly to index levels errs at
+    1.4492. Any tolerance that admitted that would make this gate decorative.
+    """
+    assert RECONSTRUCTION_TOLERANCE < LEVEL_AGGREGATION_MAX_RESIDUAL / 2
+
+
+def test_the_two_bounds_do_not_overlap() -> None:
+    """If these ever cross, the gate cannot be both safe and useful."""
+    assert OBSERVED_MAX_RESIDUAL * 1.5 < LEVEL_AGGREGATION_MAX_RESIDUAL / 2

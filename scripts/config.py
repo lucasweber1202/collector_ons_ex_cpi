@@ -38,6 +38,19 @@ WEIGHTS_TABLE = "weights"
 # the CPI release schedule, so six consecutive missed prints means ONS has
 # retired the aggregate, not that it is late.
 MAX_STALE_MONTHS = int(os.getenv("COLLECTOR_MAX_STALE_MONTHS", "6"))
+
+# The second half of 5.1: insufficient history.
+#
+# As in the CPI collector this never fires alone. An aggregate is only
+# short-history-dropped when it is also unprotected by the crosswalk (its
+# weight has gone too) and also no longer printing. ONS can introduce an
+# exclusion aggregate at any release, and a new one has a short span by
+# definition -- what separates it from a stub is that it is still published
+# and still weighted.
+#
+# One year because these are monthly indices and an aggregate with under
+# twelve prints cannot support the 12-month rate the target is used for.
+MIN_HISTORY_YEARS = float(os.getenv("COLLECTOR_MIN_HISTORY_YEARS", "1.0"))
 LOGS_TABLE = "logs"
 
 START_DATE_LOOKBACK_MONTHS = 5

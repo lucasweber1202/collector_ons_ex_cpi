@@ -121,12 +121,12 @@ def migrate_legacy_weight_ids(conn: Connection) -> None:
                 continue
             old = prefix + native
             new = row["series_id"]
-            old_count = conn.execute(
+            old_count: int = conn.execute(
                 text(f"SELECT COUNT(*) FROM {full_table} WHERE series_id=:id"), {"id": old}
             ).scalar_one()
             if not old_count:
                 continue
-            collisions = conn.execute(
+            collisions: int = conn.execute(
                 text(
                     f"SELECT COUNT(*) FROM {full_table} legacy "
                     f"JOIN {full_table} current ON current.series_id=:new "
@@ -158,7 +158,7 @@ def migrate_legacy_weight_ids(conn: Connection) -> None:
 def earliest_legacy_weight_month(engine: Engine) -> date | None:
     """Include all legacy regimes in the support-index backfill during migration."""
     with engine.connect() as conn:
-        value = conn.execute(
+        value: object = conn.execute(
             text(
                 f"SELECT MIN(reference_date) FROM {SCHEMA_NAME}.original_weights "
                 "WHERE series_id LIKE 'EXCPI_WEIGHT_NATIVE_%'"

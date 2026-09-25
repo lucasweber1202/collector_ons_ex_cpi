@@ -73,7 +73,7 @@ def assert_current_series_ids(conn: Connection) -> None:
     holding the old spelling stops the run and is migrated deliberately.
     """
     for table in (_TABLE, _TIME_SERIES):
-        legacy = conn.execute(legacy_identifier_sql(table)).scalar_one()
+        legacy: int = conn.execute(legacy_identifier_sql(table)).scalar_one()
         if legacy:
             raise ValueError(
                 f"{table} holds {legacy} rows using the superseded name-bearing series_id "
@@ -96,10 +96,43 @@ def _insert_statement(count: int) -> TextClause:
     return text(f"INSERT INTO {_TABLE} ({', '.join(_COLUMNS)}) VALUES {values}")
 
 
+# A MERGE's source rows are bare parameters in a SELECT, so unlike an INSERT
+# there is no target column for the database to infer their type from. When the
+# value is NULL, PostgreSQL types the parameter as `text` and then refuses to
+# assign it to a date, numeric or timestamp column. SQLite does not care, which
+# is why a SQLite-only test run never sees it and the failure lands on the first
+# MERGE against a real warehouse.
+#
+# Casting in the source fixes it for every value, NULL included, where binding a
+# parameter type does not: the driver still sends an untyped NULL. These type
+# names are spelled identically in PostgreSQL and Spark SQL, and this statement
+# only runs on those two -- SQLite takes the plain UPDATE path.
+#
+# Only nullable and date/time columns are listed. The numeric value columns are
+# NOT NULL, so the database always has a real number to infer from, and the two
+# dialects do not even agree on the spelling: PostgreSQL rejects DOUBLE and
+# Databricks rejects DOUBLE PRECISION. See scripts/init_db.py double_type().
+_MERGE_SOURCE_CASTS = {
+    "first_observation": "DATE",
+    "last_observation": "DATE",
+    "last_publish_date": "DATE",
+    "collected_at": "TIMESTAMP",
+    "observation_count": "INT",
+}
+
+
+def _merge_source_column(column: str, index: int) -> str:
+    """Render one MERGE source column, typed where the column is not a string."""
+    parameter = f":{column}_{index}"
+    cast = _MERGE_SOURCE_CASTS.get(column)
+    expression = f"CAST({parameter} AS {cast})" if cast else parameter
+    return f"{expression} AS {column}"
+
+
 def _merge_statement(count: int) -> TextClause:
     """Build one Databricks-compatible MERGE covering ``count`` rows."""
     source = " UNION ALL ".join(
-        "SELECT " + ", ".join(f":{column}_{index} AS {column}" for column in _COLUMNS)
+        "SELECT " + ", ".join(_merge_source_column(column, index) for column in _COLUMNS)
         for index in range(count)
     )
     assignments = ", ".join(f"{column} = source.{column}" for column in _UPDATE_COLUMNS)

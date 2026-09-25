@@ -9,6 +9,7 @@ share layer exists to remove.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date, datetime
 
 import pytest
@@ -150,7 +151,7 @@ def test_shares_persist_and_a_rerun_is_a_no_op(engine: Engine) -> None:
         assert upsert_weights(conn, rows, collected) == (1, 0)
     with engine.begin() as conn:
         assert upsert_weights(conn, rows, collected) == (0, 0)
-        stored = (
+        stored: Sequence[float] = (
             conn.execute(text("SELECT weight FROM collector_ons_ex_cpi.weights")).scalars().all()
         )
     assert stored == [0.78]
@@ -163,7 +164,7 @@ def test_a_revised_share_on_a_later_day_opens_a_new_vintage(engine: Engine) -> N
     with engine.begin() as conn:
         assert upsert_weights(conn, [{**key, "weight": 0.79}], LATER) == (0, 1)
     with engine.connect() as conn:
-        stored = (
+        stored: Sequence[float] = (
             conn.execute(
                 text("SELECT weight FROM collector_ons_ex_cpi.weights ORDER BY vintage_date")
             )

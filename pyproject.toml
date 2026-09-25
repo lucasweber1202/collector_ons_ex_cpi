@@ -24,8 +24,18 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["mypy>=1.11", "pandas-stubs>=2.0", "pytest>=8.0", "ruff>=0.6"]
 
+[tool.setuptools]
+# Without an explicit declaration setuptools auto-discovery maps only a
+# non-existent "main" package, so `pip install -e .` leaves `scripts`
+# uninstalled and a clean-room `pytest` cannot import it.
+packages = ["scripts"]
+py-modules = ["main"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Keep a bare `pytest` working: conftest.py lives in tests/, so pytest prepends
+# tests/ rather than the repository root.
+pythonpath = ["."]
 
 [tool.mypy]
 python_version = "3.11"
@@ -56,6 +66,8 @@ target-version = "py311"
 extend-exclude = ["*.md"]
 
 [tool.ruff.lint.per-file-ignores]
-# This file is copied verbatim from GUIDELINES.md §8.9; its guarded
-# runtime probing intentionally catches exceptions without logging.
-"scripts/databricks_engine.py" = ["BLE001", "S110"]
+# This file is copied verbatim from the collector template; its guarded runtime
+# probing intentionally catches exceptions without logging. It carries its own
+# inline `noqa: BLE001`, which this repository's rule selection does not enable,
+# so RUF100 is silenced here rather than editing a VERBATIM file.
+"scripts/databricks_engine.py" = ["BLE001", "RUF100", "S110"]

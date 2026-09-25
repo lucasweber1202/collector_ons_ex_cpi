@@ -73,7 +73,7 @@ def assert_current_series_ids(conn: Connection) -> None:
     holding the old spelling stops the run and is migrated deliberately.
     """
     for table in (_TABLE, _TIME_SERIES):
-        legacy = conn.execute(legacy_identifier_sql(table)).scalar_one()
+        legacy: int = conn.execute(legacy_identifier_sql(table)).scalar_one()
         if legacy:
             raise ValueError(
                 f"{table} holds {legacy} rows using the superseded name-bearing series_id "

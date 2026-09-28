@@ -121,10 +121,10 @@ def test_reconstructs_three_aggregates_and_regimes_from_persisted_rows(engine: E
                 conn.execute(
                     text(
                         "INSERT OR IGNORE INTO collector_ons_ex_cpi.metadata "
-                        "(series_id, name, country, observation_count, source_url, collected_at) "
-                        "VALUES (:sid, :sid, 'GBP', 1, 'https://www.ons.gov.uk/', :collected)"
+                        "(series_id, name, country, observation_count, eco_group, source_url, last_publish_date, collected_at) "
+                        "VALUES (:sid, :sid, 'GBP', 1, 'consumer_prices', 'https://www.ons.gov.uk/', :published, :collected)"
                     ),
-                    {"sid": sid, "collected": collected},
+                    {"sid": sid, "published": collected.date(), "collected": collected},
                 )
             for year in (2016, 2018, 2026):
                 december = date(year - 1, 12, 1)
@@ -174,10 +174,10 @@ def test_reconstructs_three_aggregates_and_regimes_from_persisted_rows(engine: E
                     conn.execute(
                         text(
                             "INSERT OR IGNORE INTO collector_ons_ex_cpi.metadata "
-                            "(series_id, name, country, observation_count, source_url, collected_at) "
-                            "VALUES (:sid, :sid, 'GBP', 1, 'https://www.ons.gov.uk/', :collected)"
+                            "(series_id, name, country, observation_count, eco_group, source_url, last_publish_date, collected_at) "
+                            "VALUES (:sid, :sid, 'GBP', 1, 'consumer_prices', 'https://www.ons.gov.uk/', :published, :collected)"
                         ),
-                        {"sid": headline, "collected": collected},
+                        {"sid": headline, "published": collected.date(), "collected": collected},
                     )
                     for ref, level in ((december, 100.0), (period, 109.0 + month - 1)):
                         conn.execute(
